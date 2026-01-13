@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Loading Animation */
+@keyframes loading {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Montserrat', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  color: #1a1a1a;
+}
+
+.dark body {
+  background-color: #030712;
+  color: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+/* Prevent layout shift */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Prevent navbar shake */
+nav {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Desktop responsive utilities */
+@media (min-width: 1024px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1280px) {
+  body {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1536px) {
+  body {
+    font-size: 18px;
+  }
+}
+
+/* Mobile responsive utilities */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Prevent horizontal scroll on mobile */
+  body,
+  html {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+/* Ensure all containers respect viewport width */
+.container,
+section,
+div {
+  max-width: 100%;
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 768px) {
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Desktop-friendly larger touch targets */
+@media (min-width: 1280px) {
+
+  button,
+  a {
+    min-height: 48px;
+  }
+}
+
+/* Smooth scrolling for all elements */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Better text rendering on large screens */
+@media (min-width: 1536px) {
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

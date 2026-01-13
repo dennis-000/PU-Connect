@@ -1,0 +1,246 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+
+export type Message = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  receiver_id: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type Conversation = {
+  id: string;
+  buyer_id: string;
+  seller_id: string;
+  product_id: string | null;
+  last_message: string;
+  last_message_at: string;
+  created_at: string;
+  other_user?: {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url?: string;
+    is_online?: boolean;
+  };
+  product?: {
+    id: string;
+    name: string;
+  };
+  unread_count?: number;
+};
+
+export function useConversations() {
+  const { user } = useAuth();
+
+  const { data: conversations = [], isLoading } = useQuery({
+    queryKey: ['conversations', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          buyer:profiles!buyer_id(id, full_name, email, avatar_url, is_online),
+          seller:profiles!seller_id(id, full_name, email, avatar_url, is_online),
+          product:products(id, name)
+        `)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order('last_message_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get unread counts for all conversations in one query
+      const conversationIds = data?.map(c => c.id) || [];
+      const { data: unreadData } = await supabase
+        .from('messages')
+        .select('conversation_id')
+        .in('conversation_id', conversationIds)
+        .neq('sender_id', user.id)
+        .eq('is_read', false);
+
+      const unreadCounts = unreadData?.reduce((acc, msg) => {
+        acc[msg.conversation_id] = (acc[msg.conversation_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      return data?.map((conv: any) => ({
+        ...conv,
+        other_user: conv.buyer_id === user.id ? conv.seller : conv.buyer,
+        unread_count: unreadCounts[conv.id] || 0,
+      })) || [];
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchInterval: 60000, // Refetch every 60 seconds
+  });
+
+  const { data: totalUnreadCount = 0 } = useQuery({
+    queryKey: ['unread-count', user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+
+      const { data: convData } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
+
+      if (!convData || convData.length === 0) return 0;
+
+      const conversationIds = convData.map(c => c.id);
+
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', conversationIds)
+        .neq('sender_id', user.id)
+        .eq('is_read', false);
+
+      return count || 0;
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 60000, // Refetch every 60 seconds
+  });
+
+  return {
+    conversations,
+    isLoading,
+    totalUnreadCount,
+  };
+}
+
+export function useMessages(conversationId: string | null) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: messages = [], isLoading } = useQuery({
+    queryKey: ['messages', conversationId],
+    queryFn: async () => {
+      if (!conversationId) return [];
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!conversationId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+
+  const sendMessage = useMutation({
+    mutationFn: async ({ message, receiverId }: { message: string, receiverId: string }) => {
+      if (!conversationId || !user) throw new Error('Missing required data');
+
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          receiver_id: receiverId,
+          message,
+          is_read: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update conversation's last message
+      await supabase
+        .from('conversations')
+        .update({
+          last_message: message,
+          last_message_at: new Date().toISOString(),
+        })
+        .eq('id', conversationId);
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+
+  const markAsRead = useMutation({
+    mutationFn: async (messageIds: string[]) => {
+      if (!user || messageIds.length === 0) return;
+
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .in('id', messageIds)
+        .neq('sender_id', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+    },
+  });
+
+  return {
+    messages,
+    isLoading,
+    sendMessage,
+    markAsRead,
+  };
+}
+
+export function useCreateConversation() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ otherUserId, productId }: { otherUserId: string, productId?: string }) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Check if conversation already exists
+      let query = supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(buyer_id.eq.${user.id},seller_id.eq.${otherUserId}),and(buyer_id.eq.${otherUserId},seller_id.eq.${user.id})`);
+
+      if (productId) {
+        query = query.eq('product_id', productId);
+      }
+
+      const { data: existing } = await query.single();
+
+      if (existing) return existing.id;
+
+      // Create new conversation
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          buyer_id: user.id,
+          seller_id: otherUserId,
+          product_id: productId || null,
+          last_message: '',
+          last_message_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
