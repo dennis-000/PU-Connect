@@ -9,6 +9,19 @@ interface SiteConfig {
     [key: string]: string;
 }
 
+interface ContentItem {
+    label: string;
+    key: string;
+    type: 'image' | 'text';
+    placeholder?: string;
+}
+
+interface ContentSection {
+    title: string;
+    description: string;
+    items: ContentItem[];
+}
+
 export default function ContentManagement() {
     const [activeTab, setActiveTab] = useState('images');
     const [config, setConfig] = useState<SiteConfig>({});
@@ -72,24 +85,38 @@ export default function ContentManagement() {
         }
     };
 
-    const sections = [
+    const imageSections: ContentSection[] = [
         {
             title: 'Home Page Hero',
             description: 'The main slider images visible on the landing page.',
             items: [
-                { label: 'Main Hero Image', key: CONTENT_KEYS.HOME_HERO_MAIN },
-                { label: 'Secondary/Aerial Image', key: CONTENT_KEYS.HOME_HERO_AERIAL },
+                { label: 'Main Hero Image', key: CONTENT_KEYS.HOME_HERO_MAIN, type: 'image' },
+                { label: 'Secondary/Aerial Image', key: CONTENT_KEYS.HOME_HERO_AERIAL, type: 'image' },
             ]
         },
         {
             title: 'Section Banners',
             description: 'Header images for specific site sections.',
             items: [
-                { label: 'Marketplace Header', key: CONTENT_KEYS.MARKETPLACE_BANNER },
-                { label: 'Campus News Header', key: CONTENT_KEYS.NEWS_BANNER },
+                { label: 'Marketplace Header', key: CONTENT_KEYS.MARKETPLACE_BANNER, type: 'image' },
+                { label: 'Campus News Header', key: CONTENT_KEYS.NEWS_BANNER, type: 'image' },
             ]
         }
     ];
+
+    const textSections: ContentSection[] = [
+        {
+            title: 'Vital Announcements',
+            description: 'Important text displayed on the home page.',
+            items: [
+                { label: 'Announcement 1', key: 'home_announcement_1', type: 'text', placeholder: 'e.g. SRC Week starts next Monday!' },
+                { label: 'Announcement 2', key: 'home_announcement_2', type: 'text', placeholder: 'e.g. Exam registration deadline extended.' },
+                { label: 'Hero Headline', key: 'home_hero_headline', type: 'text', placeholder: 'e.g. The Future of Campus Living' },
+            ]
+        }
+    ];
+
+    const activeSections = activeTab === 'images' ? imageSections : textSections;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -101,12 +128,40 @@ export default function ContentManagement() {
                         <i className="ri-layout-masonry-line"></i>
                         CMS Portal 1.0
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-none mb-4">
-                        Content<br /><span className="text-gray-400">Manager.</span>
-                    </h1>
-                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">
-                        Update site imagery and assets in real-time.
-                    </p>
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-none mb-4">
+                                Content<br /><span className="text-gray-400">Manager.</span>
+                            </h1>
+                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">
+                                Update site imagery and assets in real-time.
+                            </p>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 inline-flex">
+                            <button
+                                onClick={() => setActiveTab('images')}
+                                className={`px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'images'
+                                    ? 'bg-purple-600 text-white shadow-md'
+                                    : 'text-gray-500 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <i className="ri-image-line mr-2"></i>
+                                Imagery
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('text')}
+                                className={`px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'text'
+                                    ? 'bg-purple-600 text-white shadow-md'
+                                    : 'text-gray-500 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <i className="ri-text mr-2"></i>
+                                Text Content
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -116,7 +171,7 @@ export default function ContentManagement() {
                     </div>
                 ) : (
                     <div className="space-y-16">
-                        {sections.map((section, idx) => (
+                        {activeSections.map((section, idx) => (
                             <div key={idx} className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-gray-100">
                                 <div className="mb-10">
                                     <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{section.title}</h2>
@@ -135,28 +190,44 @@ export default function ContentManagement() {
                                                 )}
                                             </div>
 
-                                            <div className="relative group">
-                                                <ImageUploader
-                                                    currentImage={config[item.key]}
-                                                    onImageUploaded={(url) => updateConfig(item.key, url)}
-                                                    folder="cms"
-                                                    size="large"
-                                                    shape="square"
-                                                    className="w-full aspect-video h-auto"
-                                                />
-                                                {saving && (
-                                                    <div className="absolute top-4 right-4 bg-black/80 text-white text-[10px] font-bold px-3 py-1 rounded-full animate-pulse">
-                                                        Saving...
+                                            {item.type === 'image' ? (
+                                                <>
+                                                    <div className="relative group">
+                                                        <ImageUploader
+                                                            currentImage={config[item.key]}
+                                                            onImageUploaded={(url) => updateConfig(item.key, url)}
+                                                            folder="cms"
+                                                            size="large"
+                                                            shape="square"
+                                                            className="w-full aspect-video h-auto"
+                                                        />
+                                                        {saving && (
+                                                            <div className="absolute top-4 right-4 bg-black/80 text-white text-[10px] font-bold px-3 py-1 rounded-full animate-pulse">
+                                                                Saving...
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-
-                                            <div className="bg-gray-50 p-4 rounded-xl break-all">
-                                                <p className="text-[10px] font-mono text-gray-400 mb-1 uppercase">Asset URL</p>
-                                                <p className="text-xs text-gray-600 line-clamp-2">
-                                                    {config[item.key] || 'Using System Default'}
-                                                </p>
-                                            </div>
+                                                    <div className="bg-gray-50 p-4 rounded-xl break-all">
+                                                        <p className="text-[10px] font-mono text-gray-400 mb-1 uppercase">Asset URL</p>
+                                                        <p className="text-xs text-gray-600 line-clamp-2">
+                                                            {config[item.key] || 'Using System Default'}
+                                                        </p>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="relative">
+                                                    <textarea
+                                                        value={config[item.key] || ''}
+                                                        onChange={(e) => updateConfig(item.key, e.target.value)}
+                                                        placeholder={item.placeholder}
+                                                        rows={4}
+                                                        className="w-full p-4 bg-gray-50 border-none rounded-xl text-sm font-medium text-gray-900 focus:ring-2 focus:ring-purple-500/20 focus:bg-white transition-all resize-none"
+                                                    />
+                                                    <p className="text-xs text-gray-400 mt-2 text-right">
+                                                        {config[item.key]?.length || 0} characters
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
