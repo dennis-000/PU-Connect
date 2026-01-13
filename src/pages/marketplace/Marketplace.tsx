@@ -151,8 +151,8 @@ function Marketplace() {
                 key={category.id}
                 onClick={() => handleCategorySelect(category.id)}
                 className={`flex items-center gap-4 px-8 py-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer ${selectedCategory === category.id
-                  ? 'bg-gray-900 text-white shadow-lg'
-                  : 'bg-white border border-gray-100 text-gray-500 hover:border-gray-200'
+                  ? 'bg-gray-900 dark:bg-blue-600 text-white shadow-lg'
+                  : 'bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
                   }`}
               >
                 <div className={`w-6 h-6 rounded-md flex items-center justify-center ${selectedCategory === category.id ? 'bg-white/20' : category.color + ' text-white'}`}>
@@ -168,7 +168,7 @@ function Marketplace() {
         {productsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className="h-[500px] bg-gray-50 rounded-2xl animate-pulse"></div>
+              <div key={i} className="h-[500px] bg-gray-50 dark:bg-gray-900 rounded-2xl animate-pulse"></div>
             ))}
           </div>
         ) : filteredAndSortedProducts?.length ? (
@@ -179,9 +179,9 @@ function Marketplace() {
                 <div
                   key={product.id}
                   onClick={() => navigate(`/product/${product.id}`)}
-                  className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-700 group cursor-pointer"
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-700 group cursor-pointer"
                 >
-                  <div className="relative h-72 rounded-xl overflow-hidden bg-gray-50 mb-8">
+                  <div className="relative h-72 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 mb-8">
                     {product.images?.[0] ? (
                       <img
                         src={getOptimizedImageUrl(product.images[0], 600, 85)}
@@ -189,7 +189,7 @@ function Marketplace() {
                         className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-200">
+                      <div className="w-full h-full flex items-center justify-center text-gray-200 dark:text-gray-700">
                         <i className="ri-image-2-line text-7xl"></i>
                       </div>
                     )}
@@ -201,7 +201,7 @@ function Marketplace() {
                         }}
                         className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-95 cursor-pointer ${favorites.includes(product.id)
                           ? 'bg-rose-500 text-white'
-                          : 'bg-white/90 backdrop-blur-md text-gray-400 hover:text-rose-500'
+                          : 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-gray-400 hover:text-rose-500'
                           }`}
                       >
                         <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
@@ -215,24 +215,24 @@ function Marketplace() {
                   </div>
 
                   <div className="px-4 pb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-6 truncate tracking-tight group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 truncate tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {product.name}
                     </h3>
 
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Price</span>
-                        <span className="text-2xl font-bold text-gray-900 tracking-tight">
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                           {product.price_type === 'fixed' ? `₵${product.price?.toLocaleString()}` : 'Contact'}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-3">
                         <div className="text-right hidden sm:block">
-                          <p className="text-[10px] font-bold text-gray-900 uppercase tracking-widest leading-none mb-1">{seller?.full_name?.split(' ')[0]}</p>
+                          <p className="text-[10px] font-bold text-gray-900 dark:text-gray-200 uppercase tracking-widest leading-none mb-1">{seller?.full_name?.split(' ')[0]}</p>
                           <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Seller</p>
                         </div>
-                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm">
                           <img
                             src={getOptimizedImageUrl(seller?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100", 100, 85)}
                             alt=""
@@ -247,15 +247,15 @@ function Marketplace() {
             })}
           </div>
         ) : (
-          <div className="py-40 text-center bg-gray-50 rounded-3xl border border-gray-100">
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-10 shadow-lg">
-              <i className="ri-search-line text-4xl text-gray-200"></i>
+          <div className="py-40 text-center bg-gray-50 dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800">
+            <div className="w-24 h-24 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-10 shadow-lg">
+              <i className="ri-search-line text-4xl text-gray-200 dark:text-gray-700"></i>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4 tracking-tight">No products found.</h3>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">No products found.</h3>
             <p className="text-gray-400 font-semibold uppercase tracking-widest text-xs">Try adjusting your search or filters.</p>
             <button
               onClick={() => { setSelectedCategory('all'); setSearchQuery(''); setPriceRange('all'); setSortBy('newest'); }}
-              className="mt-10 px-8 py-4 bg-gray-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all cursor-pointer shadow-lg"
+              className="mt-10 px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-600 dark:hover:bg-blue-400 transition-all cursor-pointer shadow-lg"
             >
               Reset Search
             </button>

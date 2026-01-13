@@ -116,14 +116,6 @@ export default function Home() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 w-full">
           <div className="max-w-5xl">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-gray-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-full mb-8 md:mb-12 shadow-xl">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
-              </span>
-              Official University Network
-            </div>
-
             <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-white mb-8 md:mb-10 leading-[0.9] tracking-tight animate-fade-in-up">
               Connect.<br />
               <span className="text-blue-400">Succeed.</span>
@@ -156,14 +148,6 @@ export default function Home() {
                 Join Now
                 <i className="ri-user-add-line text-xl"></i>
               </Link>
-            </div>
-          </div>
-
-          {/* Cinematic Scroll Indicator */}
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-10 opacity-40 hover:opacity-100 transition-opacity duration-500">
-            <span className="text-[9px] font-bold text-white uppercase tracking-[0.3em] [writing-mode:vertical-rl] mb-4">Discover More</span>
-            <div className="w-[1px] h-16 bg-gradient-to-b from-blue-500 to-transparent relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-white animate-scroll-line" />
             </div>
           </div>
         </div>

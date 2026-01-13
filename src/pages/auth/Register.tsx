@@ -87,15 +87,15 @@ export default function Register() {
       </div>
 
       {/* Auth Interface */}
-      <div className="flex-1 flex items-center justify-center p-10 md:p-20 bg-white overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center p-10 md:p-20 bg-white dark:bg-gray-950 overflow-y-auto transition-colors duration-300">
         <div className="max-w-md w-full">
           <div className="mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 tracking-tight mb-4">Register.</h2>
-            <p className="text-gray-400 font-bold uppercase tracking-wide text-[10px]">Create your PU Connect account</p>
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-4">Register.</h2>
+            <p className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide text-[10px]">Create your PU Connect account</p>
           </div>
 
           {error && (
-            <div className="mb-8 p-6 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-4 text-rose-700">
+            <div className="mb-8 p-6 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-2xl flex items-center gap-4 text-rose-700 dark:text-rose-300">
               <i className="ri-error-warning-fill text-2xl"></i>
               <p className="font-bold text-sm">{error}</p>
             </div>
@@ -109,7 +109,7 @@ export default function Register() {
                 { label: 'Phone Number', key: 'phone', type: 'tel', placeholder: '05X XXX XXXX' },
               ].map((field) => (
                 <div key={field.key} className="relative group/field">
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-2 ml-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 ml-1">
                     {field.label}
                   </label>
                   <input
@@ -117,7 +117,7 @@ export default function Register() {
                     type={field.type}
                     value={(formData as any)[field.key]}
                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                    className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-600/20 transition-all outline-none font-semibold text-sm"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-600/20 transition-all outline-none font-semibold text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600"
                     placeholder={field.placeholder}
                   />
                 </div>
@@ -129,7 +129,7 @@ export default function Register() {
                   { label: 'Confirm Password', key: 'confirmPassword', type: 'password' }
                 ].map((field) => (
                   <div key={field.key} className="relative group/field">
-                    <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-2 ml-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 ml-1">
                       {field.label}
                     </label>
                     <input
@@ -137,7 +137,7 @@ export default function Register() {
                       type={field.type}
                       value={(formData as any)[field.key]}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-600/20 transition-all outline-none font-semibold text-sm"
+                      className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-600/20 transition-all outline-none font-semibold text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600"
                       placeholder="••••••"
                     />
                   </div>
@@ -148,7 +148,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-5 bg-gray-900 text-white rounded-2xl hover:bg-black transition-all font-bold text-xs uppercase tracking-wide shadow-xl disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-3"
+              className="w-full py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl hover:bg-black dark:hover:bg-gray-200 transition-all font-bold text-xs uppercase tracking-wide shadow-xl disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-3"
             >
               {loading ? (
                 <>
@@ -164,8 +164,8 @@ export default function Register() {
             </button>
           </form>
 
-          <div className="mt-10 text-center border-t border-gray-50 pt-8">
-            <p className="text-gray-400 font-bold text-xs">
+          <div className="mt-10 text-center border-t border-gray-50 dark:border-gray-800 pt-8">
+            <p className="text-gray-400 dark:text-gray-500 font-bold text-xs">
               Already have an account?{' '}
               <Link to="/login" className="text-blue-600 hover:text-blue-700 transition-colors ml-2 font-bold uppercase tracking-wide">
                 Sign In

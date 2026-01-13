@@ -141,11 +141,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '/admin/setup',
-    element: (
-      <ProtectedRoute allowedRoles={['admin']}>
-        <AdminSetup />
-      </ProtectedRoute>
-    ),
+    element: <AdminSetup />,
   },
   {
     path: '/admin/users',

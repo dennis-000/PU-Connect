@@ -56,12 +56,7 @@ html {
   transition-duration: 150ms;
 }
 
-/* Prevent navbar shake */
-nav {
-  will-change: transform;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-}
+/* Prevent navbar shake - Removed to fix mobile menu fixed positioning */
 
 /* Desktop responsive utilities */
 @media (min-width: 1024px) {

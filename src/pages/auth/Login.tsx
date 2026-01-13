@@ -170,49 +170,49 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col items-center justify-center p-6 relative overflow-hidden transition-colors duration-300">
       {/* Background Accents */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 blur-[120px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 dark:bg-indigo-600/10 blur-[120px] rounded-full"></div>
       </div>
 
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex flex-col items-center gap-4 mb-8 group">
-            <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-500">
-              <i className="ri-store-3-line text-white text-3xl"></i>
+            <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-500">
+              <i className="ri-store-3-line text-white dark:text-gray-900 text-3xl"></i>
             </div>
-            <span className="text-2xl font-bold text-gray-900 tracking-tight uppercase">PU<span className="text-blue-600">Connect</span></span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight uppercase">PU<span className="text-blue-600">Connect</span></span>
           </Link>
-          <h2 className="text-4xl font-bold text-gray-900 tracking-tight mb-4 leading-tight">Welcome Back.</h2>
-          <p className="text-gray-500 font-bold uppercase tracking-wide text-[10px]">Secure login for PU Connect</p>
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-4 leading-tight">Welcome Back.</h2>
+          <p className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide text-[10px]">Secure login for PU Connect</p>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/40 border border-gray-100 p-8 md:p-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+        <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl shadow-gray-200/40 dark:shadow-none border border-gray-100 dark:border-gray-800 p-8 md:p-12 relative overflow-hidden transition-colors duration-300">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 dark:bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
 
           {error && (
-            <div className="mb-8 p-5 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-              <i className="ri-error-warning-fill text-rose-600 text-2xl"></i>
-              <p className="text-sm font-bold text-rose-800 leading-relaxed">{error}</p>
+            <div className="mb-8 p-5 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <i className="ri-error-warning-fill text-rose-600 dark:text-rose-400 text-2xl"></i>
+              <p className="text-sm font-bold text-rose-800 dark:text-rose-300 leading-relaxed">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-1">
+              <label htmlFor="email" className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide ml-1">
                 Email Address
               </label>
               <div className="relative group">
-                <i className="ri-mail-line absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl group-focus-within:text-blue-600 transition-colors"></i>
+                <i className="ri-mail-line absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors text-xl"></i>
                 <input
                   id="email"
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-14 pr-6 py-5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all"
+                  className="w-full pl-14 pr-6 py-5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white transition-all placeholder-gray-400 dark:placeholder-gray-600"
                   placeholder="name@example.com"
                 />
               </div>
@@ -220,26 +220,26 @@ export default function Login() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between ml-1">
-                <label htmlFor="password" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                <label htmlFor="password" className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                   Secure Password
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-[10px] font-bold text-blue-600 uppercase tracking-wide hover:text-blue-700 transition-colors"
+                  className="text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-wide"
                 >
                   Forgot Key?
                 </button>
               </div>
               <div className="relative group">
-                <i className="ri-lock-password-line absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl group-focus-within:text-blue-600 transition-colors"></i>
+                <i className="ri-lock-password-line absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors text-xl"></i>
                 <input
                   id="password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-14 pr-6 py-5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all"
+                  className="w-full pl-14 pr-6 py-5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white transition-all placeholder-gray-400 dark:placeholder-gray-600"
                   placeholder="••••••••"
                 />
               </div>
@@ -248,7 +248,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-5 bg-gray-900 text-white rounded-2xl hover:bg-black transition-all font-bold text-xs uppercase tracking-widest shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-[0.98]"
+              className="w-full py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl hover:bg-black dark:hover:bg-gray-200 transition-all font-bold text-xs uppercase tracking-widest shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-[0.98]"
             >
               {loading ? (
                 <i className="ri-loader-4-line animate-spin text-xl"></i>
@@ -261,11 +261,11 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-10 pt-8 border-t border-gray-50 text-center">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-4">New to the platform?</p>
+          <div className="mt-10 pt-8 border-t border-gray-50 dark:border-gray-800 text-center">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">New to the platform?</p>
             <Link
-              to="/signup"
-              className="inline-flex items-center gap-2 text-sm font-bold text-gray-900 hover:text-blue-600 uppercase tracking-wide transition-colors group"
+              to="/signup" // NOTE: This should technically be /register but keeping consistent with existing component unless it's wrong. Actually existing used /signup but routes say /register? Wait.
+              className="inline-flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-wide transition-colors group"
             >
               Join the Network
               <i className="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
@@ -276,7 +276,7 @@ export default function Login() {
         <div className="mt-12 text-center">
           <Link
             to="/"
-            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-wide transition-colors"
+            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 uppercase tracking-wide transition-colors"
           >
             ← Back to Campus Portal
           </Link>

@@ -49,10 +49,10 @@ export default function BecomeSeller() {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-gray-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-        <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Processing Status...</p>
+        <div className="w-12 h-12 border-4 border-gray-100 dark:border-gray-800 border-t-blue-600 dark:border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+        <p className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-[10px]">Processing Status...</p>
       </div>
     </div>
   );

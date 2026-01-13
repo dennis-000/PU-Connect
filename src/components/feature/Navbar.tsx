@@ -124,6 +124,7 @@ export default function Navbar() {
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Toggle Theme"
               >
                 {theme === 'dark' ? (
                   <i className="ri-sun-line text-xl text-yellow-400"></i>
@@ -131,6 +132,16 @@ export default function Navbar() {
                   <i className="ri-moon-line text-xl text-gray-600 dark:text-gray-400"></i>
                 )}
               </button>
+
+              {user && (
+                <button
+                  onClick={handleSignOut}
+                  className="hidden lg:flex p-2 rounded-full text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                  title="Sign Out"
+                >
+                  <i className="ri-logout-circle-line text-xl"></i>
+                </button>
+              )}
 
               {user ? (
                 <div className="flex items-center gap-4 md:gap-6">
@@ -141,6 +152,14 @@ export default function Navbar() {
                       <span className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full ring-4 ring-white dark:ring-gray-900"></span>
                     )}
                   </Link>
+
+                  {/* Temporary Admin Setup Link - REMOVE IN PRODUCTION */}
+                  {/* Only show to admins/super_admins OR users who haven't been assigned a specific role yet (to allow self-setup in dev) */}
+                  {(!profile?.role || ['admin', 'super_admin'].includes(profile.role)) && (
+                    <Link to="/admin/setup" className="hidden lg:flex relative group p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all" title="Grant Admin Access">
+                      <i className="ri-shield-keyhole-line text-xl md:text-2xl text-purple-900 dark:text-purple-300"></i>
+                    </Link>
+                  )}
 
                   {/* Profile Dropdown - Hidden on Mobile to fix responsiveness */}
                   <div className="relative hidden lg:block" ref={dropdownRef}>
@@ -262,6 +281,23 @@ export default function Navbar() {
                 <i className="ri-arrow-right-line text-xl text-gray-700 group-hover:text-white transition-colors"></i>
               </Link>
             ))}
+
+            {/* Mobile Admin Setup Link */}
+            {user && (!profile?.role || ['admin', 'super_admin'].includes(profile.role)) && (
+              <Link
+                to="/admin/setup"
+                onClick={() => setShowMobileMenu(false)}
+                className="group flex items-center justify-between p-5 rounded-2xl hover:bg-white/5 active:scale-[0.98] transition-all border border-transparent hover:border-white/5"
+              >
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-900/20 text-purple-400 shadow-lg ring-1 ring-white/5">
+                    <i className="ri-shield-keyhole-line text-xl"></i>
+                  </div>
+                  <span className="text-lg font-bold text-gray-200 tracking-tight group-hover:text-white transition-colors">Admin Access</span>
+                </div>
+                <i className="ri-arrow-right-line text-xl text-gray-700 group-hover:text-white transition-colors"></i>
+              </Link>
+            )}
 
             {user && (
               <Link

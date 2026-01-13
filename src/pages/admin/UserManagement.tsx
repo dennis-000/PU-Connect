@@ -64,7 +64,7 @@ export default function UserManagement() {
         .eq('id', userId);
 
       if (error) throw error;
-      
+
       await fetchUsers();
       setOpenDropdown(null);
       alert(`User ${!currentStatus ? 'activated' : 'suspended'} successfully`);
@@ -86,7 +86,7 @@ export default function UserManagement() {
         .eq('id', userId);
 
       if (error) throw error;
-      
+
       await fetchUsers();
       setOpenDropdown(null);
       alert('User deleted successfully');
@@ -114,7 +114,7 @@ export default function UserManagement() {
         .eq('id', selectedUser.id);
 
       if (error) throw error;
-      
+
       await fetchUsers();
       setShowEditModal(false);
       setSelectedUser(null);
@@ -152,13 +152,13 @@ export default function UserManagement() {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = 
+    const matchesSearch =
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.student_id && user.student_id.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    
+
     return matchesSearch && matchesRole;
   });
 
@@ -176,7 +176,7 @@ export default function UserManagement() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -312,9 +312,6 @@ export default function UserManagement() {
                     User
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Student ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -348,33 +345,28 @@ export default function UserManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.student_id || '-'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{user.department || '-'}</div>
                       {user.faculty && (
                         <div className="text-sm text-gray-500">{user.faculty}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'admin' 
-                          ? 'bg-orange-100 text-orange-800'
-                          : user.role === 'seller'
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin'
+                        ? 'bg-orange-100 text-orange-800'
+                        : user.role === 'seller'
                           ? 'bg-green-100 text-green-800'
                           : user.role === 'news_publisher'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {user.role === 'news_publisher' ? 'News Publisher' : user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {user.is_active ? 'Active' : 'Suspended'}
                       </span>
                     </td>
@@ -392,8 +384,8 @@ export default function UserManagement() {
                       {/* Dropdown Menu */}
                       {openDropdown === user.id && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-10" 
+                          <div
+                            className="fixed inset-0 z-10"
                             onClick={() => setOpenDropdown(null)}
                           ></div>
                           <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
@@ -455,7 +447,7 @@ export default function UserManagement() {
               <p className="text-sm text-gray-600 mb-4">
                 Change role for <span className="font-medium text-gray-900">{selectedUser.full_name}</span>
               </p>
-              
+
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Role
               </label>

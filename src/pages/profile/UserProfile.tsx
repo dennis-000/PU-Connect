@@ -255,7 +255,6 @@ export default function UserProfile() {
                   {[
                     { label: 'Full Name', key: 'full_name', value: formData.full_name, type: 'text', placeholder: 'Enter your full name' },
                     { label: 'Account Email', key: 'email', value: profile.email, type: 'email', disabled: true },
-                    { label: 'Student ID Number', key: 'student_id', value: formData.student_id, type: 'text', placeholder: 'e.g. U2XX-XXXX' },
                     { label: 'Contact Number', key: 'phone', value: formData.phone, type: 'tel', placeholder: 'e.g. 05X XXX XXXX' },
                     { label: 'Academic Faculty', key: 'faculty', value: formData.faculty, type: 'text', placeholder: 'Enter your faculty' },
                     { label: 'Department', key: 'department', value: formData.department, type: 'text', placeholder: 'Enter your department' }
