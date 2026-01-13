@@ -35,6 +35,7 @@ export default function AddProduct() {
     priceType: 'fixed' as 'fixed' | 'contact',
     images: [] as string[],
     sellerId: '',
+    whatsappNumber: '',
   });
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
@@ -50,6 +51,11 @@ export default function AddProduct() {
       fetchSellers();
     } else if (profile?.id) {
       setFormData(prev => ({ ...prev, sellerId: profile.id }));
+    }
+
+    // Attempt to pre-fill phone if available
+    if (profile?.phone && !formData.whatsappNumber) {
+      setFormData(prev => ({ ...prev, whatsappNumber: profile.phone || '' }));
     }
   }, [isAdmin, profile]);
 
@@ -92,6 +98,7 @@ export default function AddProduct() {
         price: formData.priceType === 'fixed' ? parseFloat(formData.price) : null,
         price_type: formData.priceType,
         images: formData.images.length > 0 ? formData.images : null,
+        whatsapp_number: formData.whatsappNumber,
         is_active: true,
       };
 
@@ -247,50 +254,72 @@ export default function AddProduct() {
                 </div>
               </div>
 
-              {/* Pricing */}
+              {/* Pricing & Contact */}
               <div className="space-y-6">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Pricing Method
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, priceType: 'fixed' })}
-                    className={`p-6 rounded-[2rem] border-2 text-left transition-all ${formData.priceType === 'fixed' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-50 border-gray-100 text-gray-900'
-                      }`}
-                  >
-                    <i className={`ri-price-tag-3-line text-2xl mb-4 block ${formData.priceType === 'fixed' ? 'text-blue-200' : 'text-blue-600'}`}></i>
-                    <p className="font-bold text-sm uppercase tracking-widest leading-none mb-1">Fixed Price</p>
-                    <p className={`text-[10px] font-semibold ${formData.priceType === 'fixed' ? 'text-blue-100' : 'text-gray-400'}`}>Set a standard selling price</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, priceType: 'contact' })}
-                    className={`p-6 rounded-[2rem] border-2 text-left transition-all ${formData.priceType === 'contact' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-50 border-gray-100 text-gray-900'
-                      }`}
-                  >
-                    <i className={`ri-customer-service-2-line text-2xl mb-4 block ${formData.priceType === 'contact' ? 'text-blue-200' : 'text-blue-600'}`}></i>
-                    <p className="font-bold text-sm uppercase tracking-widest leading-none mb-1">Negotiable</p>
-                    <p className={`text-[10px] font-semibold ${formData.priceType === 'contact' ? 'text-blue-100' : 'text-gray-400'}`}>Open to buyer inquiries</p>
-                  </button>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Pricing Method
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, priceType: 'fixed' })}
+                        className={`p-6 rounded-[2rem] border-2 text-left transition-all ${formData.priceType === 'fixed' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-50 border-gray-100 text-gray-900'
+                          }`}
+                      >
+                        <i className={`ri-price-tag-3-line text-2xl mb-4 block ${formData.priceType === 'fixed' ? 'text-blue-200' : 'text-blue-600'}`}></i>
+                        <p className="font-bold text-sm uppercase tracking-widest leading-none mb-1">Fixed Price</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, priceType: 'contact' })}
+                        className={`p-6 rounded-[2rem] border-2 text-left transition-all ${formData.priceType === 'contact' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-50 border-gray-100 text-gray-900'
+                          }`}
+                      >
+                        <i className={`ri-customer-service-2-line text-2xl mb-4 block ${formData.priceType === 'contact' ? 'text-blue-200' : 'text-blue-600'}`}></i>
+                        <p className="font-bold text-sm uppercase tracking-widest leading-none mb-1">Negotiable</p>
+                      </button>
+                    </div>
 
-                {formData.priceType === 'fixed' && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="relative max-w-xs">
-                      <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-xl text-gray-400">GH₵</span>
+                    {formData.priceType === 'fixed' && (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="relative max-w-xs">
+                          <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-xl text-gray-400">GH₵</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required={formData.priceType === 'fixed'}
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-bold outline-none text-2xl text-gray-900 transition-all"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      WhatsApp Contact
+                    </label>
+                    <div className="relative group">
+                      <i className="ri-whatsapp-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors text-xl"></i>
                       <input
-                        type="number"
-                        step="0.01"
-                        required={formData.priceType === 'fixed'}
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-bold outline-none text-2xl text-gray-900 transition-all"
-                        placeholder="0.00"
+                        type="tel"
+                        required
+                        value={formData.whatsappNumber}
+                        onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                        className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 font-bold outline-none text-lg text-gray-900 transition-all placeholder-gray-400"
+                        placeholder="054 123 4567"
                       />
+                      <p className="text-[10px] text-gray-400 font-semibold mt-2 ml-1">
+                        Customers will be redirected to chat with you on this number.
+                      </p>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="flex pt-6">

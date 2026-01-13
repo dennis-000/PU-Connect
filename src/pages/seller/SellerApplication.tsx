@@ -13,6 +13,7 @@ export default function SellerApplication() {
     businessCategory: '',
     businessDescription: '',
     contactPhone: '',
+    whatsappNumber: '',
     contactEmail: user?.email || '',
   });
 
@@ -67,7 +68,7 @@ export default function SellerApplication() {
             user_id: user.id,
             business_name: formData.businessName,
             business_category: formData.businessCategory,
-            business_description: formData.businessDescription,
+            business_description: `${formData.businessDescription}\n\n[WhatsApp Contact: ${formData.whatsappNumber}]`,
             contact_phone: formData.contactPhone,
             contact_email: formData.contactEmail,
             status: 'pending'
@@ -225,28 +226,51 @@ export default function SellerApplication() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                      Contact Phone
+                      Call Number
                     </label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.contactPhone}
-                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                      className="w-full px-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
-                      placeholder="e.g. 054 123 4567"
-                    />
+                    <div className="relative group">
+                      <i className="ri-phone-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.contactPhone}
+                        onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                        className="w-full pl-12 pr-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
+                        placeholder="054 123 4567"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                      Contact Email
+                      WhatsApp Number
                     </label>
+                    <div className="relative group">
+                      <i className="ri-whatsapp-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.whatsappNumber}
+                        onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                        className="w-full pl-12 pr-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
+                        placeholder="054 123 4567"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
+                    Contact Email
+                  </label>
+                  <div className="relative group">
+                    <i className="ri-mail-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
                     <input
                       type="email"
                       required
                       value={formData.contactEmail}
                       onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                      className="w-full px-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
+                      className="w-full pl-12 pr-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
                       placeholder="business@example.com"
                     />
                   </div>

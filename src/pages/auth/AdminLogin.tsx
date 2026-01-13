@@ -20,7 +20,7 @@ export default function AdminLogin() {
 
         try {
             // 1. Check for HARDCODED System Credentials (Escape Hatch)
-            if (email === 'system.admin@gmail.com' && password === 'pukonnect@!') {
+            if (email.toLowerCase() === 'system.admin@gmail.com' && password === 'pukonnect@!') {
                 console.log('System Override Activated');
                 localStorage.setItem('sys_admin_bypass', 'true');
                 window.location.href = '/admin/dashboard';

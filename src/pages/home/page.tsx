@@ -6,6 +6,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { getOptimizedImageUrl } from '../../lib/imageOptimization';
 import { useSiteContent, CONTENT_KEYS } from '../../hooks/useSiteContent';
 import Navbar from '../../components/feature/Navbar';
+import NewsletterSignup from '../../components/feature/NewsletterSignup';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -369,6 +370,43 @@ export default function Home() {
               <p className="text-gray-500 font-bold uppercase tracking-widest text-lg">No Recent Updates</p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Newsletter Section - Digital Pulse */}
+      <section className="py-24 relative overflow-hidden bg-gray-900">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-indigo-800 to-gray-900 opacity-90"></div>
+
+        {/* Animated Background Mesh */}
+        <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500 rounded-full blur-[120px] opacity-30 translate-x-1/3 -translate-y-1/3 animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[100px] opacity-30 -translate-x-1/3 translate-y-1/3"></div>
+
+        <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-widest mb-8 shadow-lg">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>Join 3,000+ Students</span>
+          </div>
+
+          <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-none drop-shadow-lg">
+            Always Be <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-indigo-200">The First To Know.</span>
+          </h2>
+
+          <p className="text-blue-100 text-lg md:text-xl mb-12 max-w-2xl mx-auto leading-relaxed font-medium">
+            Get exclusive access to top-tier market deals, breaking campus news, and community events delivered straight to your inbox.
+          </p>
+
+          <NewsletterSignup />
+
+          <div className="mt-8 flex items-center justify-center gap-6 text-[10px] font-bold uppercase tracking-widest text-blue-200/60">
+            <span className="flex items-center gap-1"><i className="ri-shield-check-fill"></i> No Spam</span>
+            <span className="flex items-center gap-1"><i className="ri-lock-2-fill"></i> Secure</span>
+            <span className="flex items-center gap-1"><i className="ri-time-line"></i> Weekly Updates</span>
+          </div>
         </div>
       </section>
 

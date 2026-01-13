@@ -198,23 +198,31 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-auto">
                 <button
                   onClick={handleWhatsAppContact}
-                  className="w-full px-8 py-4.5 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95 text-xs uppercase tracking-widest"
+                  className="w-full px-4 py-4.5 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-xs uppercase tracking-widest"
                   disabled={!product?.whatsapp_number}
                 >
                   <i className="ri-whatsapp-line text-xl"></i>
-                  <span>WhatsApp Chat</span>
+                  <span>WhatsApp</span>
                 </button>
+
+                <a
+                  href={`tel:${seller?.phone}`}
+                  className={`w-full px-4 py-4.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-xs uppercase tracking-widest ${!seller?.phone ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <i className="ri-phone-line text-xl"></i>
+                  <span>Call Seller</span>
+                </a>
 
                 <button
                   onClick={handleInAppMessage}
-                  className="w-full px-8 py-4.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-2xl hover:bg-black dark:hover:bg-gray-100 shadow-lg shadow-gray-900/20 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95 text-xs uppercase tracking-widest"
+                  className="w-full px-4 py-4.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-2xl hover:bg-black dark:hover:bg-gray-100 shadow-lg shadow-gray-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-xs uppercase tracking-widest"
                   disabled={createConversationMutation.isPending}
                 >
                   <i className="ri-message-3-line text-xl"></i>
-                  <span>{createConversationMutation.isPending ? 'Connecting...' : 'In-App Message'}</span>
+                  <span>{createConversationMutation.isPending ? 'Connecting...' : 'Message'}</span>
                 </button>
               </div>
 

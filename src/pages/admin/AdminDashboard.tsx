@@ -258,6 +258,7 @@ export default function AdminDashboard() {
                     { title: 'Publish News', desc: 'Create campus updates', path: '/admin/news', icon: 'ri-article-line' },
                     { title: 'Add Product', desc: 'List new inventory item', path: '/seller/add-product', icon: 'ri-add-circle-line' },
                     { title: 'SMS Broadcast', desc: 'Send alerts to students', path: '/admin/sms', icon: 'ri-message-3-line' },
+                    { title: 'Newsletter List', desc: 'Manage subscribers', path: '/admin/newsletter', icon: 'ri-mail-open-line' },
                     { title: 'Internal Chat', desc: 'Team Communication', path: '/admin/messages', icon: 'ri-chat-smile-2-line' },
                     // Conditional Links for Super Admin
                     ...(profile?.role === 'super_admin' ? [

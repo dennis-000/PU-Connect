@@ -20,6 +20,7 @@ const UserManagement = lazy(() => import('../pages/admin/UserManagement'));
 const ActivityMonitor = lazy(() => import('../pages/admin/ActivityMonitor'));
 const AdminMessages = lazy(() => import('../pages/admin/AdminMessages'));
 const NewsManagement = lazy(() => import('../pages/admin/NewsManagement'));
+const NewsletterManagement = lazy(() => import('../pages/admin/NewsletterManagement'));
 const SMSManagement = lazy(() => import('../pages/admin/SMSManagement'));
 const WebsiteSettings = lazy(() => import('../pages/admin/WebsiteSettings'));
 const ContentManagement = lazy(() => import('../pages/admin/ContentManagement'));
@@ -157,6 +158,14 @@ const routes: RouteObject[] = [
     element: (
       <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
         <NewsManagement />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/newsletter',
+    element: (
+      <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+        <NewsletterManagement />
       </ProtectedRoute>
     ),
   },
