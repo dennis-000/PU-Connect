@@ -32,8 +32,8 @@ export default function UserManagement() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && profile?.role !== 'admin') {
-      navigate('/');
+    if (!authLoading && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+      navigate('/marketplace');
     }
   }, [profile, authLoading, navigate]);
 
@@ -150,14 +150,27 @@ export default function UserManagement() {
     }
   };
 
-  const handleExportData = () => {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const handleExportData = (category?: string) => {
+    let usersToExport = users;
+
+    if (category) {
+      usersToExport = users.filter(u => u.role === category);
+    }
+
+    if (usersToExport.length === 0) {
+      alert('No users found for this category');
+      return;
+    }
+
     const csvContent = [
       ['Email', 'Full Name', 'Department', 'Faculty', 'Role', 'Status', 'Created At'],
-      ...filteredUsers.map(user => [
-        user.email,
-        user.full_name,
-        user.department || '',
-        user.faculty || '',
+      ...usersToExport.map(user => [
+        `"${user.email}"`,
+        `"${user.full_name}"`,
+        `"${user.department || ''}"`,
+        `"${user.faculty || ''}"`,
         user.role,
         user.is_active ? 'Active' : 'Suspended',
         new Date(user.created_at).toLocaleDateString()
@@ -168,8 +181,9 @@ export default function UserManagement() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `pentvars-${category || 'all'}-users-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+    setShowExportMenu(false);
   };
 
   const filteredUsers = users.filter(user => {
@@ -225,13 +239,39 @@ export default function UserManagement() {
               <i className="ri-arrow-left-line mr-2"></i>
               Back to Dashboard
             </button>
-            <button
-              onClick={handleExportData}
-              className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 border border-transparent rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-black dark:hover:bg-gray-100 transition-colors shadow-lg shadow-gray-200/50 dark:shadow-none cursor-pointer"
-            >
-              <i className="ri-download-line mr-2"></i>
-              Export CSV
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 border border-transparent rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-black dark:hover:bg-gray-100 transition-colors shadow-lg shadow-gray-200/50 dark:shadow-none cursor-pointer flex items-center gap-2"
+              >
+                <i className="ri-download-line text-lg"></i>
+                Export Data
+                <i className={`ri-arrow-down-s-line transition-transform ${showExportMenu ? 'rotate-180' : ''}`}></i>
+              </button>
+
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)}></div>
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 py-1 z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <button onClick={() => handleExportData()} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 transition-colors flex items-center gap-2">
+                      <i className="ri-database-2-line text-blue-500"></i> All Users
+                    </button>
+                    <button onClick={() => handleExportData('buyer')} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-cyan-600 transition-colors flex items-center gap-2">
+                      <i className="ri-shopping-bag-3-line text-cyan-500"></i> Buyers Only
+                    </button>
+                    <button onClick={() => handleExportData('seller')} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-emerald-600 transition-colors flex items-center gap-2">
+                      <i className="ri-store-2-line text-emerald-500"></i> Sellers Only
+                    </button>
+                    <button onClick={() => handleExportData('admin')} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-amber-600 transition-colors flex items-center gap-2">
+                      <i className="ri-shield-star-line text-amber-500"></i> Admins Only
+                    </button>
+                    <button onClick={() => handleExportData('news_publisher')} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-purple-600 transition-colors flex items-center gap-2">
+                      <i className="ri-newspaper-line text-purple-500"></i> Publishers Only
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -341,20 +381,20 @@ export default function UserManagement() {
                     </td>
                     <td className="px-8 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-[10px] font-bold uppercase tracking-widest rounded-full border ${user.role === 'admin'
-                          ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/30'
-                          : user.role === 'seller'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-900/30'
-                            : user.role === 'news_publisher'
-                              ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-900/30'
-                              : 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-900/30'
+                        ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/30'
+                        : user.role === 'seller'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-900/30'
+                          : user.role === 'news_publisher'
+                            ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-900/30'
+                            : 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-900/30'
                         }`}>
                         {user.role === 'news_publisher' ? 'News' : user.role}
                       </span>
                     </td>
                     <td className="px-8 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${user.is_active
-                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                          : 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                        : 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
                         }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                         {user.is_active ? 'Active' : 'Suspended'}
@@ -460,8 +500,8 @@ export default function UserManagement() {
               <div className="grid grid-cols-1 gap-3">
                 {['buyer', 'seller', 'news_publisher', 'admin'].map((role) => (
                   <label key={role} className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${editRole === role
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'
                     }`}>
                     <input
                       type="radio"

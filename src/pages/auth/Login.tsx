@@ -144,7 +144,7 @@ export default function Login() {
         <div className="w-full max-w-[420px] animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <Link to="/" className="w-20 h-20 transition-transform duration-500 active:scale-95">
+            <Link to="/" className="w-32 h-32 transition-transform duration-500 active:scale-95">
               <img src="/PU%20Connect%20logo.png" alt="Logo" className="w-full h-full object-contain" />
             </Link>
           </div>

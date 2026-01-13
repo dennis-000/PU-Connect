@@ -16,7 +16,6 @@ const SellerDashboard = lazy(() => import('../pages/seller/SellerDashboard'));
 const AddProduct = lazy(() => import('../pages/seller/AddProduct'));
 const EditProduct = lazy(() => import('../pages/seller/EditProduct'));
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
-const AdminSetup = lazy(() => import('../pages/admin/AdminSetup'));
 const UserManagement = lazy(() => import('../pages/admin/UserManagement'));
 const ActivityMonitor = lazy(() => import('../pages/admin/ActivityMonitor'));
 const AdminMessages = lazy(() => import('../pages/admin/AdminMessages'));
@@ -32,7 +31,6 @@ const SellerApplications = lazy(() => import('../pages/admin/SellerApplications'
 const PaymentCallback = lazy(() => import('../pages/payment/PaymentCallback'));
 const SubscriptionManagement = lazy(() => import('../pages/admin/SubscriptionManagement'));
 const RoleManagement = lazy(() => import('../pages/admin/RoleManagement'));
-const SuperAdminManagement = lazy(() => import('../pages/admin/SuperAdminManagement'));
 const NewsPublisherDashboard = lazy(() => import('../pages/publisher/NewsPublisherDashboard'));
 const Support = lazy(() => import('../pages/support/Support'));
 
@@ -104,7 +102,7 @@ const routes: RouteObject[] = [
   {
     path: '/seller/dashboard',
     element: (
-      <ProtectedRoute allowedRoles={['seller']}>
+      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin']}>
         <SellerDashboard />
       </ProtectedRoute>
     ),
@@ -112,7 +110,7 @@ const routes: RouteObject[] = [
   {
     path: '/seller/add-product',
     element: (
-      <ProtectedRoute allowedRoles={['seller']}>
+      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin']}>
         <AddProduct />
       </ProtectedRoute>
     ),
@@ -120,7 +118,7 @@ const routes: RouteObject[] = [
   {
     path: '/seller/edit-product/:id',
     element: (
-      <ProtectedRoute allowedRoles={['seller']}>
+      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin']}>
         <EditProduct />
       </ProtectedRoute>
     ),
@@ -145,10 +143,7 @@ const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  {
-    path: '/admin/setup',
-    element: <AdminSetup />,
-  },
+
   {
     path: '/admin/users',
     element: (
@@ -229,14 +224,7 @@ const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  {
-    path: '/admin/super-admins',
-    element: (
-      <ProtectedRoute allowedRoles={['super_admin']}>
-        <SuperAdminManagement />
-      </ProtectedRoute>
-    ),
-  },
+
   {
     path: '/profile',
     element: (
@@ -248,7 +236,7 @@ const routes: RouteObject[] = [
   {
     path: '/publisher',
     element: (
-      <ProtectedRoute allowedRoles={['news_publisher']}>
+      <ProtectedRoute allowedRoles={['news_publisher', 'admin', 'super_admin']}>
         <NewsPublisherDashboard />
       </ProtectedRoute>
     ),

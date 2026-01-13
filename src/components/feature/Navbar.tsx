@@ -84,7 +84,7 @@ export default function Navbar() {
   }, [showDropdown]);
 
   const getDashboardItem = () => {
-    if (profile?.role === 'super_admin') return { label: 'Admin Dashboard', path: '/admin/super-admins', icon: 'ri-dashboard-line' };
+    if (profile?.role === 'super_admin') return { label: 'Admin Dashboard', path: '/admin', icon: 'ri-dashboard-line' };
     if (profile?.role === 'admin') return { label: 'Admin Dashboard', path: '/admin', icon: 'ri-dashboard-line' };
     if (profile?.role === 'news_publisher') return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
     if (profile?.role === 'seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
@@ -186,12 +186,7 @@ export default function Navbar() {
                     )}
                   </Link>
 
-                  {/* RESTORED: Admin Setup Link */}
-                  {(!profile?.role || ['admin', 'super_admin'].includes(profile.role)) && (
-                    <Link to="/admin/setup" className="hidden lg:flex relative group p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all" title="Grant Admin Access">
-                      <i className="ri-shield-keyhole-line text-xl md:text-2xl text-purple-900 dark:text-purple-300"></i>
-                    </Link>
-                  )}
+
 
                   {/* Profile Dropdown - Hidden on Mobile to fix responsiveness */}
                   <div className="relative hidden lg:block" ref={dropdownRef}>
@@ -332,22 +327,7 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* RESTORED: Mobile Admin Setup Link */}
-            {user && (!profile?.role || ['admin', 'super_admin'].includes(profile.role)) && (
-              <Link
-                to="/admin/setup"
-                onClick={() => setShowMobileMenu(false)}
-                className="group flex items-center justify-between p-5 rounded-2xl hover:bg-white/5 active:scale-[0.98] transition-all border border-transparent hover:border-white/5"
-              >
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-900/20 text-purple-400 shadow-lg ring-1 ring-white/5">
-                    <i className="ri-shield-keyhole-line text-xl"></i>
-                  </div>
-                  <span className="text-lg font-bold text-gray-200 tracking-tight group-hover:text-white transition-colors">Admin Access</span>
-                </div>
-                <i className="ri-arrow-right-line text-xl text-gray-700 group-hover:text-white transition-colors"></i>
-              </Link>
-            )}
+
 
             {user && dashboardItem && (
               <Link

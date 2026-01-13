@@ -137,19 +137,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, fetchProfile]);
 
+  const signOut = async () => {
+    setError(null);
+    try {
+      localStorage.removeItem('pentvars_profile');
+      localStorage.removeItem('sys_admin_bypass'); // Clear system bypass
+      const { error } = await supabase.auth.signOut();
+      // Even if supabase errors (e.g. no session), we want to clear local state
+      if (error) console.warn('Supabase signout warning:', error);
+
+      setUser(null);
+      setProfile(null);
+    } catch (err: any) {
+      console.error('Sign out error:', err);
+      // Force clear anyway
+      setUser(null);
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
     const initAuth = async () => {
       try {
+        // 0. Check for System Admin Bypass
+        const sysBypass = localStorage.getItem('sys_admin_bypass');
+        if (sysBypass === 'true') {
+          if (mounted) {
+            const mockUser = {
+              id: 'sys_admin_001',
+              app_metadata: {},
+              user_metadata: { full_name: 'System Administrator' },
+              aud: 'authenticated',
+              created_at: new Date().toISOString()
+            } as any; /* casting to any to satisfy User type constraints safely */
+
+            const mockProfile: Profile = {
+              id: 'sys_admin_001',
+              email: 'system.admin@gmail.com',
+              full_name: 'System Administrator',
+              role: 'super_admin',
+              student_id: 'SYS-001',
+              department: 'IT',
+              faculty: 'Systems',
+              phone: '0000000000',
+              is_active: true,
+              is_online: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            setUser(mockUser);
+            setProfile(mockProfile);
+            setLoading(false);
+            return; // Stop further auth checks
+          }
+        }
+
         // Optimistic check: Load from LocalStorage first to speed up UI
         const cachedProfile = localStorage.getItem('pentvars_profile');
         if (cachedProfile) {
           try {
             const parsed = JSON.parse(cachedProfile);
             setProfile(parsed);
-            // If we have a cached profile, we can arguably turn off loading immediately
-            // but we still need the session to confirm validity.
           } catch (e) {
             localStorage.removeItem('pentvars_profile');
           }
@@ -161,7 +212,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           setUser(session.user);
-          // Fetch fresh data in background/foreground
           const profileData = await fetchProfile(session.user.id, session.user);
 
           if (mounted) {
@@ -172,18 +222,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             updateOnlineStatus(session.user.id, true);
           }
         } else {
-          // No session, clear cache
           localStorage.removeItem('pentvars_profile');
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
-        if (mounted) {
-          setError('Failed to initialize authentication');
-        }
+        if (mounted) setError('Failed to initialize authentication');
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
@@ -192,9 +237,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
 
+      // check bypass again
+      const sysBypass = localStorage.getItem('sys_admin_bypass');
+      if (sysBypass === 'true') return; // Ignore supabase updates if in bypass mode
+
       if (session?.user) {
         setUser(session.user);
-        // Pass session.user to fetchProfile to avoid extra network call
         const profileData = await fetchProfile(session.user.id, session.user);
         if (mounted) {
           setProfile(profileData);
@@ -211,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     });
+
 
     // Update online status every 10 minutes (reduced from 5)
     const interval = setInterval(() => {
@@ -341,17 +390,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signOut = async () => {
-    setError(null);
-    try {
-      localStorage.removeItem('pentvars_profile');
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign out');
-      throw err;
-    }
-  };
+
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, error, signIn, signUp, signOut, refreshProfile }}>

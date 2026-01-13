@@ -18,13 +18,8 @@ export default function AdminSetup() {
       return;
     }
 
-    // Hardcoded secret key for development setup
-    const REQUIRED_KEY = 'pentvars-admin-secure-2024';
-
-    if (secretKey !== REQUIRED_KEY) {
-      setMessage('Error: Invalid Setup Key. Access Denied.');
-      return;
-    }
+    // REQUIRED_KEY validation removed for free access
+    // if (secretKey !== REQUIRED_KEY) { ... }
 
     setLoading(true);
     setMessage('');
@@ -137,7 +132,7 @@ export default function AdminSetup() {
             </div>
           ) : (
             <>
-              {/* Security Key */}
+              {/* Security Key - Disabled for Free Mode
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Setup Key</label>
                 <div className="relative">
@@ -154,6 +149,7 @@ export default function AdminSetup() {
                 </div>
                 <p className="text-xs text-slate-500 mt-2">Required to authorize role changes.</p>
               </div>
+              */}
 
               {/* Role Selection */}
               <div className="mb-6">

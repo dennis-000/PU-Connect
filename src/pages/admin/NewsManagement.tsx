@@ -26,7 +26,7 @@ export default function NewsManagement() {
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
 
   useEffect(() => {
-    if (profile?.role === 'admin' || profile?.role === 'news_publisher') {
+    if (profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'news_publisher') {
       fetchNews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,7 +43,7 @@ export default function NewsManagement() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (profile?.role !== 'admin' && profile?.role !== 'news_publisher') {
+    if (profile?.role !== 'admin' && profile?.role !== 'super_admin' && profile?.role !== 'news_publisher') {
       navigate('/marketplace');
       return;
     }
@@ -196,10 +196,26 @@ export default function NewsManagement() {
     }
   };
 
+  const [searchTerm, setSearchTerm] = useState('');
+
   const filteredNews = news.filter((article) => {
-    if (filter === 'all') return true;
-    const isPublished = filter === 'published';
-    return article.is_published === isPublished;
+    // 1. Filter by Status
+    if (filter !== 'all') {
+      const isPublished = filter === 'published';
+      if (article.is_published !== isPublished) return false;
+    }
+
+    // 2. Filter by Search Query
+    if (searchTerm) {
+      const query = searchTerm.toLowerCase();
+      return (
+        article.title.toLowerCase().includes(query) ||
+        article.category.toLowerCase().includes(query) ||
+        article.author?.full_name.toLowerCase().includes(query)
+      );
+    }
+
+    return true;
   });
 
   return (
@@ -239,9 +255,22 @@ export default function NewsManagement() {
             </button>
           </div>
         </div>
+      </div>  {/* Closing Search/Filter Flex Container */}
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl border border-gray-200 p-2 mb-6">
+      {/* Filters & Search */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1 relative">
+          <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input
+            type="text"
+            placeholder="Search news by title, category, or author..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all"
+          />
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-2 flex-shrink-0">
           <div className="flex space-x-2">
             <button
               onClick={() => setFilter('all')}

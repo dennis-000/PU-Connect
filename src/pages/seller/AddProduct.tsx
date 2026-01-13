@@ -37,10 +37,10 @@ export default function AddProduct() {
     sellerId: '',
   });
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
 
   useEffect(() => {
-    if (!authLoading && profile?.role !== 'seller' && profile?.role !== 'admin') {
+    if (!authLoading && profile?.role !== 'seller' && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
       navigate('/seller/status');
     }
   }, [profile, authLoading, navigate]);

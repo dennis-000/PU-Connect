@@ -21,13 +21,14 @@ export default function RoleManagement() {
   const [activeTab, setActiveTab] = useState<'publishers' | 'admins'>('publishers');
   const [showAddPublisherModal, setShowAddPublisherModal] = useState(false);
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
-  const [newPublisherEmail, setNewPublisherEmail] = useState('');
-  const [newAdminEmail, setNewAdminEmail] = useState('');
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
+  const [searchCandidateTerm, setSearchCandidateTerm] = useState('');
+  const [selectedCandidate, setSelectedCandidate] = useState<User | null>(null);
+
   useEffect(() => {
-    if (!authLoading && profile?.role !== 'admin') {
-      navigate('/');
+    if (!authLoading && profile?.role !== 'super_admin') {
+      navigate('/marketplace');
     }
   }, [profile, authLoading, navigate]);
 
@@ -59,25 +60,21 @@ export default function RoleManagement() {
     }
   };
 
+  const resetModals = () => {
+    setShowAddPublisherModal(false);
+    setShowAddAdminModal(false);
+    setSearchCandidateTerm('');
+    setSelectedCandidate(null);
+  };
+
   const handleAddNewsPublisher = async () => {
-    if (!newPublisherEmail.trim()) {
-      setNotification({ type: 'error', message: 'Please enter an email address' });
+    if (!selectedCandidate) {
+      setNotification({ type: 'error', message: 'Please select a user first' });
       return;
     }
 
     try {
-      const { data: user, error: findError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', newPublisherEmail.trim())
-        .single();
-
-      if (findError || !user) {
-        setNotification({ type: 'error', message: 'User not found with this email address' });
-        return;
-      }
-
-      if (user.role === 'news_publisher') {
+      if (selectedCandidate.role === 'news_publisher') {
         setNotification({ type: 'error', message: 'This user is already a News Publisher' });
         return;
       }
@@ -85,13 +82,12 @@ export default function RoleManagement() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ role: 'news_publisher' })
-        .eq('id', user.id);
+        .eq('id', selectedCandidate.id);
 
       if (updateError) throw updateError;
 
       await fetchUsers();
-      setShowAddPublisherModal(false);
-      setNewPublisherEmail('');
+      resetModals();
       setNotification({ type: 'success', message: 'News Publisher role assigned successfully!' });
     } catch (error) {
       console.error('Error adding news publisher:', error);
@@ -100,24 +96,13 @@ export default function RoleManagement() {
   };
 
   const handleAddAdmin = async () => {
-    if (!newAdminEmail.trim()) {
-      setNotification({ type: 'error', message: 'Please enter an email address' });
+    if (!selectedCandidate) {
+      setNotification({ type: 'error', message: 'Please select a user first' });
       return;
     }
 
     try {
-      const { data: user, error: findError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', newAdminEmail.trim())
-        .single();
-
-      if (findError || !user) {
-        setNotification({ type: 'error', message: 'User not found with this email address' });
-        return;
-      }
-
-      if (user.role === 'admin') {
+      if (selectedCandidate.role === 'admin') {
         setNotification({ type: 'error', message: 'This user is already an Administrator' });
         return;
       }
@@ -125,13 +110,12 @@ export default function RoleManagement() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ role: 'admin' })
-        .eq('id', user.id);
+        .eq('id', selectedCandidate.id);
 
       if (updateError) throw updateError;
 
       await fetchUsers();
-      setShowAddAdminModal(false);
-      setNewAdminEmail('');
+      resetModals();
       setNotification({ type: 'success', message: 'Administrator role assigned successfully!' });
     } catch (error) {
       console.error('Error adding admin:', error);
@@ -159,6 +143,7 @@ export default function RoleManagement() {
   const newsPublishers = users.filter(u => u.role === 'news_publisher');
   const admins = users.filter(u => u.role === 'admin');
 
+  // Filter lists for the main view
   const filteredPublishers = newsPublishers.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.full_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -168,6 +153,22 @@ export default function RoleManagement() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Filter logic for Modals: show users who DO NOT have the role yet
+  const getEligibleCandidates = (targetRole: 'admin' | 'news_publisher') => {
+    return users
+      .filter(u => u.role !== targetRole && u.role !== 'super_admin') // Exclude those who already have it
+      .filter(u =>
+        u.email.toLowerCase().includes(searchCandidateTerm.toLowerCase()) ||
+        u.full_name.toLowerCase().includes(searchCandidateTerm.toLowerCase())
+      )
+      .slice(0, 10); // Limit to 10 for performance in dropdown
+  };
+
+  const eligibleCandidates = showAddAdminModal
+    ? getEligibleCandidates('admin')
+    : getEligibleCandidates('news_publisher');
+
 
   if (authLoading || loading) {
     return (
@@ -253,8 +254,8 @@ export default function RoleManagement() {
             <button
               onClick={() => setActiveTab('admins')}
               className={`px-6 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'admins'
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
+                ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
             >
               Admins
@@ -262,8 +263,8 @@ export default function RoleManagement() {
             <button
               onClick={() => setActiveTab('publishers')}
               className={`px-6 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'publishers'
-                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
+                ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
             >
               Publishers
@@ -368,50 +369,73 @@ export default function RoleManagement() {
       {/* Add News Publisher Modal */}
       {showAddPublisherModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-2xl max-w-md w-full p-8 border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-2xl max-w-md w-full p-8 border border-gray-100 dark:border-gray-800 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Add Publisher</h3>
               <button
-                onClick={() => {
-                  setShowAddPublisherModal(false);
-                  setNewPublisherEmail('');
-                }}
+                onClick={resetModals}
                 className="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <i className="ri-close-line text-xl"></i>
               </button>
             </div>
 
-            <div className="mb-8">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                Enter the email address of the user you want to assign permissions to publish campus news.
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed flex-shrink-0">
+                Select a user to grant Campus News publishing privileges.
               </p>
 
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2 ml-1">
-                User Email
-              </label>
-              <input
-                type="email"
-                value={newPublisherEmail}
-                onChange={(e) => setNewPublisherEmail(e.target.value)}
-                placeholder="user@example.com"
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-cyan-500/20 font-medium text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all"
-              />
+              <div className="relative mb-4 flex-shrink-0">
+                <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input
+                  type="text"
+                  value={searchCandidateTerm}
+                  onChange={(e) => setSearchCandidateTerm(e.target.value)}
+                  placeholder="Search users by name or email..."
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-cyan-500/20 font-medium text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto min-h-[200px] bg-gray-50/50 dark:bg-gray-800/50 rounded-xl p-2 mb-6">
+                {eligibleCandidates.map(user => (
+                  <div
+                    key={user.id}
+                    onClick={() => setSelectedCandidate(user)}
+                    className={`p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-all ${selectedCandidate?.id === user.id
+                      ? 'bg-cyan-50 dark:bg-cyan-900/30 border border-cyan-200 dark:border-cyan-800'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent'
+                      }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm text-gray-600 dark:text-gray-300 font-bold text-xs">
+                      {user.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.full_name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                    </div>
+                    {selectedCandidate?.id === user.id && (
+                      <i className="ri-check-line text-cyan-600 ml-auto"></i>
+                    )}
+                  </div>
+                ))}
+                {eligibleCandidates.length === 0 && (
+                  <p className="text-center text-xs text-gray-400 py-8">No matching users found.</p>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-shrink-0">
               <button
-                onClick={() => {
-                  setShowAddPublisherModal(false);
-                  setNewPublisherEmail('');
-                }}
+                onClick={resetModals}
                 className="flex-1 px-6 py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddNewsPublisher}
-                className="flex-1 px-6 py-4 bg-cyan-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-700 transition-colors whitespace-nowrap cursor-pointer shadow-lg shadow-cyan-200 dark:shadow-none"
+                disabled={!selectedCandidate}
+                className="flex-1 px-6 py-4 bg-cyan-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-700 transition-colors whitespace-nowrap cursor-pointer shadow-lg shadow-cyan-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Publisher
               </button>
@@ -423,58 +447,81 @@ export default function RoleManagement() {
       {/* Add Admin Modal */}
       {showAddAdminModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-2xl max-w-md w-full p-8 border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-2xl max-w-md w-full p-8 border border-gray-100 dark:border-gray-800 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Add Administrator</h3>
               <button
-                onClick={() => {
-                  setShowAddAdminModal(false);
-                  setNewAdminEmail('');
-                }}
+                onClick={resetModals}
                 className="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <i className="ri-close-line text-xl"></i>
               </button>
             </div>
 
-            <div className="mb-8">
-              <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl p-4 mb-6">
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl p-4 mb-6 flex-shrink-0">
                 <div className="flex items-start gap-3">
                   <i className="ri-shield-alert-line text-amber-600 text-xl flex-shrink-0 mt-0.5"></i>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-amber-800 dark:text-amber-400 mb-1">High Privilege Role</p>
                     <p className="text-xs text-amber-700 dark:text-amber-500/80 leading-relaxed">
-                      Administrators have full access to manage users, products, news, and system usage.
+                      This user will have full administrative access (system management, user control).
                     </p>
                   </div>
                 </div>
               </div>
 
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2 ml-1">
-                User Email
-              </label>
-              <input
-                type="email"
-                value={newAdminEmail}
-                onChange={(e) => setNewAdminEmail(e.target.value)}
-                placeholder="user@example.com"
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-amber-500/20 font-medium text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all"
-              />
+              <div className="relative mb-4 flex-shrink-0">
+                <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input
+                  type="text"
+                  value={searchCandidateTerm}
+                  onChange={(e) => setSearchCandidateTerm(e.target.value)}
+                  placeholder="Search users by name or email..."
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-amber-500/20 font-medium text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto min-h-[200px] bg-gray-50/50 dark:bg-gray-800/50 rounded-xl p-2 mb-6">
+                {eligibleCandidates.map(user => (
+                  <div
+                    key={user.id}
+                    onClick={() => setSelectedCandidate(user)}
+                    className={`p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-all ${selectedCandidate?.id === user.id
+                      ? 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent'
+                      }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm text-gray-600 dark:text-gray-300 font-bold text-xs">
+                      {user.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.full_name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                    </div>
+                    {selectedCandidate?.id === user.id && (
+                      <i className="ri-check-line text-amber-600 ml-auto"></i>
+                    )}
+                  </div>
+                ))}
+                {eligibleCandidates.length === 0 && (
+                  <p className="text-center text-xs text-gray-400 py-8">No eligible users found.</p>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-shrink-0">
               <button
-                onClick={() => {
-                  setShowAddAdminModal(false);
-                  setNewAdminEmail('');
-                }}
+                onClick={resetModals}
                 className="flex-1 px-6 py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddAdmin}
-                className="flex-1 px-6 py-4 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-600 transition-colors whitespace-nowrap cursor-pointer shadow-lg shadow-amber-200 dark:shadow-none"
+                disabled={!selectedCandidate}
+                className="flex-1 px-6 py-4 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-600 transition-colors whitespace-nowrap cursor-pointer shadow-lg shadow-amber-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Admin
               </button>

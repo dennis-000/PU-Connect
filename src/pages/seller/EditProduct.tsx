@@ -34,7 +34,7 @@ export default function EditProduct() {
   });
 
   useEffect(() => {
-    if (!user || (profile?.role !== 'seller' && profile?.role !== 'admin')) {
+    if (!user || (profile?.role !== 'seller' && profile?.role !== 'admin' && profile?.role !== 'super_admin')) {
       navigate('/marketplace');
       return;
     }
@@ -58,8 +58,8 @@ export default function EditProduct() {
       if (error) throw error;
 
       if (data) {
-        // Check if user owns this product or is admin
-        if (data.seller_id !== user?.id && profile?.role !== 'admin') {
+        // Check if user owns this product or is admin/super_admin
+        if (data.seller_id !== user?.id && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
           navigate('/seller/dashboard');
           return;
         }
