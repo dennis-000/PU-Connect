@@ -143,22 +143,22 @@ function Marketplace() {
 
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 py-12 md:py-20">
 
-        {/* Category Matrix */}
-        <div className="mb-20 overflow-x-auto pb-4 no-scrollbar">
-          <div className="flex gap-4 md:gap-6 min-w-max px-2">
+        {/* Category Matrix - Clean Simple Design */}
+        <div className="mb-16 border-b border-gray-100 dark:border-gray-800 overflow-x-auto no-scrollbar">
+          <div className="flex gap-8 md:gap-12 min-w-max px-2">
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => handleCategorySelect(category.id)}
-                className={`flex items-center gap-4 px-8 py-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer ${selectedCategory === category.id
-                  ? 'bg-gray-900 dark:bg-blue-600 text-white shadow-lg'
-                  : 'bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
+                className={`relative pb-4 font-bold text-xs uppercase tracking-widest transition-all cursor-pointer whitespace-nowrap ${selectedCategory === category.id
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center ${selectedCategory === category.id ? 'bg-white/20' : category.color + ' text-white'}`}>
-                  <i className={`${category.icon} text-sm`}></i>
-                </div>
                 {category.name}
+                {selectedCategory === category.id && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
+                )}
               </button>
             ))}
           </div>

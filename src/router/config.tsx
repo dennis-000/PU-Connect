@@ -33,6 +33,7 @@ const SubscriptionManagement = lazy(() => import('../pages/admin/SubscriptionMan
 const RoleManagement = lazy(() => import('../pages/admin/RoleManagement'));
 const SuperAdminManagement = lazy(() => import('../pages/admin/SuperAdminManagement'));
 const NewsPublisherDashboard = lazy(() => import('../pages/publisher/NewsPublisherDashboard'));
+const Support = lazy(() => import('../pages/support/Support'));
 
 const routes: RouteObject[] = [
   {
@@ -250,6 +251,10 @@ const routes: RouteObject[] = [
   {
     path: '*',
     element: <NotFound />,
+  },
+  {
+    path: '/support',
+    element: <Support />,
   },
 ];
 

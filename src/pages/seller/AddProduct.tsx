@@ -93,7 +93,6 @@ export default function AddProduct() {
         price_type: formData.priceType,
         images: formData.images.length > 0 ? formData.images : null,
         is_active: true,
-        views_count: 0,
       };
 
       const { error } = await supabase
@@ -181,7 +180,7 @@ export default function AddProduct() {
                     <select
                       value={formData.sellerId}
                       onChange={(e) => setFormData({ ...formData, sellerId: e.target.value })}
-                      className="w-full px-6 py-4 bg-white border-none rounded-xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all appearance-none cursor-pointer"
+                      className="w-full px-6 py-4 bg-white border-none rounded-xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all appearance-none cursor-pointer"
                       required
                     >
                       <option value="">Select a registered seller...</option>
@@ -208,7 +207,7 @@ export default function AddProduct() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all"
+                      className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all"
                       placeholder="e.g. Vintage Denim Jacket"
                     />
                   </div>
@@ -222,7 +221,7 @@ export default function AddProduct() {
                         required
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all appearance-none cursor-pointer"
+                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all appearance-none cursor-pointer"
                       >
                         <option value="">Select Category</option>
                         {categories.map((cat) => (
@@ -242,7 +241,7 @@ export default function AddProduct() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={4}
-                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all resize-none"
+                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all resize-none"
                     placeholder="Provide detailed information about the product's condition and features..."
                   />
                 </div>
@@ -286,7 +285,7 @@ export default function AddProduct() {
                         required={formData.priceType === 'fixed'}
                         value={formData.price}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-bold outline-none text-2xl transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-bold outline-none text-2xl text-gray-900 transition-all"
                         placeholder="0.00"
                       />
                     </div>

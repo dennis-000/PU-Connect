@@ -187,7 +187,7 @@ export default function EditProduct() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all"
+                      className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all"
                       placeholder="e.g. Vintage Denim Jacket"
                     />
                   </div>
@@ -201,7 +201,7 @@ export default function EditProduct() {
                         required
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all appearance-none cursor-pointer"
+                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all appearance-none cursor-pointer"
                       >
                         <option value="">Select Category</option>
                         {categories.map((cat) => (
@@ -221,7 +221,7 @@ export default function EditProduct() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={4}
-                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all resize-none"
+                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all resize-none"
                     placeholder="Provide detailed information about the product..."
                   />
                 </div>
@@ -265,7 +265,7 @@ export default function EditProduct() {
                         required={formData.priceType === 'fixed'}
                         value={formData.price}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-bold outline-none text-2xl transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-bold outline-none text-2xl text-gray-900 transition-all"
                         placeholder="0.00"
                       />
                     </div>
@@ -282,7 +282,7 @@ export default function EditProduct() {
                   type="tel"
                   value={formData.whatsapp_number}
                   onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
-                  className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm transition-all"
+                  className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 transition-all"
                   placeholder="+233 XX XXX XXXX"
                 />
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Customers can contact you directly on WhatsApp</p>

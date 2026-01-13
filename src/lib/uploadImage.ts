@@ -39,20 +39,24 @@ export async function uploadImage(
     const fileName = `${user.id}/${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     // Upload to Supabase Storage with optimized settings
+    const BUCKET_NAME = 'media';
     const { data, error } = await supabase.storage
-      .from('uploads')
+      .from(BUCKET_NAME)
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false,
       });
 
     if (error) {
+      if (error.message && error.message.includes('Bucket not found')) {
+        throw new Error(`Storage bucket '${BUCKET_NAME}' not found. Please create a public bucket named '${BUCKET_NAME}' in your Supabase dashboard.`);
+      }
       throw error;
     }
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
+      .from('media') // Same bucket as above
       .getPublicUrl(data.path);
 
     return {

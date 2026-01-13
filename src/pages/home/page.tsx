@@ -1,5 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useFeaturedNews } from '../../hooks/useNews';
 import { useProducts } from '../../hooks/useProducts';
 import { getOptimizedImageUrl } from '../../lib/imageOptimization';
@@ -8,6 +9,7 @@ import Navbar from '../../components/feature/Navbar';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: featuredNews = [], isLoading: isNewsLoading } = useFeaturedNews(5);
   const { data: allProducts = [], isLoading: isProductsLoading } = useProducts();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -59,13 +61,13 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section - Immersive Terminal */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 md:pt-0 bg-gray-950">
+      <section className="relative min-h-[90vh] md:min-h-screen flex items-center overflow-hidden bg-gray-950">
         {/* Background Slider */}
         <div className="absolute inset-0 z-0">
           {heroImages.map((img, index) => (
             <div
               key={img}
-              className={`absolute inset-0 transition-opacity duration-[2s] ease-in-out ${index === heroSlide ? 'opacity-50' : 'opacity-0'
+              className={`absolute inset-0 transition-opacity duration-[2s] ease-in-out ${index === heroSlide ? 'opacity-40' : 'opacity-0'
                 }`}
             >
               <img
@@ -76,80 +78,65 @@ export default function Home() {
               />
             </div>
           ))}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-900/60 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-900/80 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent"></div>
+
           {/* High-tech grid overlay */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-          <div className="absolute top-1/2 left-0 -translate-x-1/4 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px]"></div>
-
-          {/* Cinematic Slider Indicators */}
-          <div className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 flex flex-col gap-10 z-20">
-            {heroImages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setHeroSlide(i)}
-                className="group relative flex items-center justify-end gap-6 transition-all cursor-pointer"
-              >
-                <div className="text-right opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:block">
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em] mb-1">Perspective {i + 1}</p>
-                  <p className="text-sm font-bold text-white tracking-tight">{i === 0 ? 'Admin Core' : 'Aerial Reach'}</p>
-                </div>
-
-                <div className="relative flex flex-col items-center">
-                  <span className={`text-[10px] font-black transition-all duration-500 mb-2 ${i === heroSlide ? 'text-blue-400 scale-125' : 'text-white/20'
-                    }`}>
-                    0{i + 1}
-                  </span>
-                  <div className={`w-[2px] h-12 rounded-full transition-all duration-700 overflow-hidden bg-white/10`}>
-                    <div
-                      className={`w-full bg-blue-500 transition-all duration-[8000ms] ease-linear`}
-                      style={{
-                        height: i === heroSlide ? '100%' : '0%',
-                        opacity: i === heroSlide ? 1 : 0
-                      }}
-                    />
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px]"></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 w-full">
-          <div className="max-w-5xl">
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-white mb-8 md:mb-10 leading-[0.9] tracking-tight animate-fade-in-up">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 w-full pt-20">
+          <div className="max-w-4xl">
+            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-white mb-6 md:mb-8 leading-[1.1] md:leading-[0.95] tracking-tight animate-fade-in-up">
               Connect.<br />
-              <span className="text-blue-400">Succeed.</span>
+              <span className="text-blue-500">Succeed.</span>
             </h1>
 
-            <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-12 mb-12 md:mb-16 animate-fade-in-up delay-200">
-              <p className="text-base md:text-xl text-gray-300 font-medium max-w-xl leading-relaxed">
-                The premier digital platform for campus commerce. <br />
+            <div className="flex flex-col md:flex-row md:items-start gap-8 md:gap-12 mb-10 md:mb-14 animate-fade-in-up delay-100">
+              <p className="text-lg md:text-2xl text-gray-300 font-medium max-w-xl leading-relaxed">
+                The premier digital platform for campus commerce. <br className="hidden md:block" />
                 <span className="text-white font-bold">Secure</span> transactions within your student community.
               </p>
 
-              <div className="hidden md:flex flex-col border-l-2 border-blue-500 pl-6">
-                <span className="text-3xl font-bold text-white tracking-tight">1.5K+</span>
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide mt-1">Verified Transactions</span>
+              <div className="hidden md:flex flex-col border-l-2 border-blue-500 pl-6 mt-1">
+                <span className="text-3xl font-bold text-white tracking-tight">2.5K+</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">Active Students</span>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-5 md:gap-8 animate-fade-in-up delay-300">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 animate-fade-in-up delay-200">
               <Link
                 to="/marketplace"
-                className="group px-12 py-6 bg-gray-900 text-white rounded-2xl hover:bg-blue-600 transition-all font-bold text-xs md:text-sm uppercase tracking-widest shadow-lg flex items-center justify-center gap-4 active:scale-95"
+                className="group px-8 py-5 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 transition-all font-bold text-sm uppercase tracking-widest shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 active:scale-95"
               >
-                Browse Marketplace
-                <i className="ri-arrow-right-line text-xl group-hover:translate-x-2 transition-transform"></i>
+                Start Trading
+                <i className="ri-arrow-right-line text-lg group-hover:translate-x-1 transition-transform"></i>
               </Link>
               <Link
-                to="/register"
-                className="px-12 py-6 bg-white text-gray-900 border-2 border-gray-100 rounded-2xl hover:border-blue-600 transition-all font-bold text-xs md:text-sm uppercase tracking-widest flex items-center justify-center gap-4 active:scale-95 shadow-sm"
+                to={user ? "/seller/dashboard" : "/register"}
+                className="px-8 py-5 bg-white/5 backdrop-blur-md text-white border border-white/10 rounded-2xl hover:bg-white/10 transition-all font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95"
               >
-                Join Now
-                <i className="ri-user-add-line text-xl"></i>
+                {user ? 'My Dashboard' : 'Join Community'}
+                <i className="ri-user-add-line text-lg"></i>
               </Link>
             </div>
           </div>
+        </div>
+
+        {/* Slider Indicators - Desktop Only */}
+        <div className="absolute right-12 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-8 z-20">
+          {heroImages.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setHeroSlide(i)}
+              className="group relative flex items-center justify-end gap-4 transition-all cursor-pointer"
+            >
+              <div className="text-right opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">View {i + 1}</p>
+              </div>
+              <div className={`w-1.5 h-12 rounded-full transition-all duration-500 overflow-hidden ${i === heroSlide ? 'bg-blue-500 h-16' : 'bg-white/10 hover:bg-white/20'}`}></div>
+            </button>
+          ))}
         </div>
       </section>
 

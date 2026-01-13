@@ -159,7 +159,38 @@ export default function NewsManagement() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // If we just published the article (was false, now true)
+      if (!isPublished) {
+        try {
+          const { data: article } = await supabase.from('campus_news').select('*').eq('id', id).single();
+
+          if (article) {
+            const { sendSMS } = await import('../../lib/arkesel');
+
+            // In a real app with thousands of users, you would use a backend job or batching.
+            // Here we fetch users with phones. Warning: limit 1000 for safety, but could be more.
+            const { data: users } = await supabase.from('profiles').select('phone').not('phone', 'is', null).limit(1000);
+
+            if (users && users.length > 0) {
+              // Extract phone numbers properly
+              const phoneNumbers = users.map(u => u.phone).filter(p => p && p.length > 5);
+
+              if (phoneNumbers.length > 0) {
+                await sendSMS(
+                  phoneNumbers,
+                  `CAMPUS NEWS: ${article.title}. Read more at: https://pentvars-connect.netlify.app/news/${id}`
+                );
+              }
+            }
+          }
+        } catch (smsErr) {
+          console.error('Failed to send news broadcast:', smsErr);
+        }
+      }
+
       fetchNews();
+      alert(`News ${!isPublished ? 'published' : 'unpublished'} successfully!`);
     } catch (error: any) {
       alert(error.message || 'Failed to update status');
     }

@@ -103,7 +103,7 @@ export default function SellerApplication() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid_cols-12 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Information Section */}
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-gray-900 dark:bg-gray-800 text-white p-8 rounded-[2rem] shadow-xl shadow-gray-900/10 dark:shadow-none transition-colors">

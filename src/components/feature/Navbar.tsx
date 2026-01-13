@@ -77,9 +77,18 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo Section */}
           <Link to="/" className="flex items-center space-x-3 group relative z-10 transition-transform active:scale-95">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-900 dark:bg-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl group-hover:rotate-6 transition-all duration-500 overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <i className="ri-store-3-line text-white dark:text-gray-900 text-lg md:text-2xl relative z-10"></i>
+            {/* Logo Image - Clean Look */}
+            <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
+              <img
+                src="/logo.png"
+                alt="PU Connect"
+                className="w-full h-full object-contain drop-shadow-sm"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.classList.add('bg-blue-600', 'rounded-xl', 'text-white');
+                  e.currentTarget.parentElement!.innerHTML = '<i class="ri-store-3-fill text-2xl"></i>';
+                }}
+              />
             </div>
             <div className="flex flex-col">
               <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-tight leading-none">
@@ -110,6 +119,14 @@ export default function Navbar() {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link
+                to="/support"
+                className="group flex items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all tracking-wide uppercase relative py-1"
+              >
+                <i className="ri-customer-service-2-line text-lg group-hover:text-blue-600 transition-colors"></i>
+                Help Center
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
+              </Link>
+              <Link
                 to="/seller/apply"
                 className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-95 transition-all"
               >
@@ -134,13 +151,7 @@ export default function Navbar() {
               </button>
 
               {user && (
-                <button
-                  onClick={handleSignOut}
-                  className="hidden lg:flex p-2 rounded-full text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
-                  title="Sign Out"
-                >
-                  <i className="ri-logout-circle-line text-xl"></i>
-                </button>
+                <div className="hidden lg:flex" />
               )}
 
               {user ? (
@@ -177,7 +188,7 @@ export default function Navbar() {
                       <i className={`ri-arrow-down-s-line text-lg text-gray-400 transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`}></i>
                     </button>
 
-                    <div className={`absolute top-full right-0 mt-4 w-72 bg-white dark:bg-gray-900 rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-800 p-4 transition-all duration-500 origin-top-right ${showDropdown ? 'opacity-100 translate-y-0 visible' : 'opacity-0 translate-y-4 invisible'
+                    <div className={`absolute top-full right-0 mt-4 w-60 md:w-72 max-w-[90vw] bg-white dark:bg-gray-900 rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-800 p-3 transition-all duration-300 origin-top-right z-50 ${showDropdown ? 'opacity-100 translate-y-0 visible' : 'opacity-0 translate-y-4 invisible'
                       }`}>
                       <div className="p-4 mb-2 border-b border-gray-50 dark:border-gray-800">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">User Account</p>
@@ -188,6 +199,7 @@ export default function Navbar() {
                         {[
                           { label: 'My Settings', path: '/profile', icon: 'ri-user-settings-line' },
                           { label: 'Management Dashboard', path: getDashboardLink(), icon: 'ri-dashboard-line' },
+                          { label: 'Help Center', path: '/support', icon: 'ri-customer-service-2-line' },
                           { label: 'Saved Products', path: '/profile#favorites', icon: 'ri-heart-line' }
                         ].map((item) => (
                           <Link
@@ -257,6 +269,7 @@ export default function Navbar() {
               { label: 'Home Terminal', path: '/', icon: 'ri-home-5-line', color: 'text-blue-400', bg: 'bg-blue-900/20' },
               { label: 'Marketplace', path: '/marketplace', icon: 'ri-compass-3-line', color: 'text-emerald-400', bg: 'bg-emerald-900/20' },
               { label: 'Campus News', path: '/news', icon: 'ri-newspaper-line', color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
+              { label: 'Help Center', path: '/support', icon: 'ri-customer-service-2-line', color: 'text-pink-400', bg: 'bg-pink-900/20' },
               {
                 label: 'Become a Seller',
                 path: user ? '/seller/apply' : '/seller/become',

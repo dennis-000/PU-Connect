@@ -11,6 +11,7 @@ type User = {
   student_id: string | null;
   department: string | null;
   faculty: string | null;
+  phone: string | null;
   role: string;
   is_active: boolean;
   created_at: string;
@@ -45,7 +46,8 @@ export default function UserManagement() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
       setUsers(data || []);
@@ -115,6 +117,23 @@ export default function UserManagement() {
 
       if (error) throw error;
 
+      // Send SMS Notification if role changed
+      if (selectedUser.phone) {
+        try {
+          const { sendSMS } = await import('../../lib/arkesel');
+          const firstName = selectedUser.full_name.split(' ')[0];
+          const newRole = editRole === 'news_publisher' ? 'News Publisher' :
+            editRole.charAt(0).toUpperCase() + editRole.slice(1);
+
+          await sendSMS(
+            [selectedUser.phone],
+            `Hi ${firstName}, your account role on PU Connect has been updated to "${newRole}". You now have ${newRole} privileges. Login to access your dashboard.`
+          );
+        } catch (smsErr) {
+          console.error('Failed to send role update SMS:', smsErr);
+        }
+      }
+
       await fetchUsers();
       setShowEditModal(false);
       setSelectedUser(null);
@@ -130,11 +149,10 @@ export default function UserManagement() {
 
   const handleExportData = () => {
     const csvContent = [
-      ['Email', 'Full Name', 'Student ID', 'Department', 'Faculty', 'Role', 'Status', 'Created At'],
+      ['Email', 'Full Name', 'Department', 'Faculty', 'Role', 'Status', 'Created At'],
       ...filteredUsers.map(user => [
         user.email,
         user.full_name,
-        user.student_id || '',
         user.department || '',
         user.faculty || '',
         user.role,

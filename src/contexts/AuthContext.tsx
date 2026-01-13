@@ -142,17 +142,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
+        // Optimistic check: Load from LocalStorage first to speed up UI
+        const cachedProfile = localStorage.getItem('pentvars_profile');
+        if (cachedProfile) {
+          try {
+            const parsed = JSON.parse(cachedProfile);
+            setProfile(parsed);
+            // If we have a cached profile, we can arguably turn off loading immediately
+            // but we still need the session to confirm validity.
+          } catch (e) {
+            localStorage.removeItem('pentvars_profile');
+          }
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!mounted) return;
 
         if (session?.user) {
           setUser(session.user);
+          // Fetch fresh data in background/foreground
           const profileData = await fetchProfile(session.user.id, session.user);
+
           if (mounted) {
             setProfile(profileData);
+            if (profileData) {
+              localStorage.setItem('pentvars_profile', JSON.stringify(profileData));
+            }
             updateOnlineStatus(session.user.id, true);
           }
+        } else {
+          // No session, clear cache
+          localStorage.removeItem('pentvars_profile');
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
@@ -177,12 +198,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profileData = await fetchProfile(session.user.id, session.user);
         if (mounted) {
           setProfile(profileData);
+          if (profileData) {
+            localStorage.setItem('pentvars_profile', JSON.stringify(profileData));
+          }
           updateOnlineStatus(session.user.id, true);
         }
       } else {
         if (mounted) {
           setUser(null);
           setProfile(null);
+          localStorage.removeItem('pentvars_profile');
         }
       }
     });
@@ -276,6 +301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setError(null);
     try {
+      localStorage.removeItem('pentvars_profile');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (err: any) {
