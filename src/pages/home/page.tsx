@@ -7,6 +7,7 @@ import { getOptimizedImageUrl } from '../../lib/imageOptimization';
 import { useSiteContent, CONTENT_KEYS } from '../../hooks/useSiteContent';
 import Navbar from '../../components/feature/Navbar';
 import NewsletterSignup from '../../components/feature/NewsletterSignup';
+import AdSenseBanner from '../../components/feature/AdSenseBanner';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -164,6 +165,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <AdSenseBanner />
 
       {/* Featured Collections - Redefined */}
       <section className="py-12 md:py-24 bg-gray-50/50 dark:bg-gray-950/50 relative overflow-hidden">
