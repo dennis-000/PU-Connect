@@ -99,7 +99,10 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
-      <div className="absolute inset-0 bg-white/80 dark:bg-gray-950/80 backdrop-blur-2xl border-b border-gray-100/50 dark:border-gray-800/50"></div>
+      <div className="absolute inset-0 bg-white/70 dark:bg-gray-950/70 backdrop-blur-md border-b border-gray-100/30 dark:border-gray-800/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
+        {/* Adds a subtle noise texture to the glass for realism */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc0JyBoZWlnaHQ9JzQnPgo8cmVjdCB3aWR0aD0nNCcgaGVpZ2h0PSc0JyBmaWxsPScjZmZmJy8+CjxyZWN0IHdpZHRoMScxJyBoZWlnaHQ9JzEnIGZpbGw9JyM4ODgnLz4KPC9zdmc+')]"></div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 relative">
         <div className="flex justify-between items-center h-16 md:h-20">
@@ -138,6 +141,14 @@ export default function Navbar() {
               >
                 <i className="ri-newspaper-line text-lg group-hover:text-blue-600 transition-colors"></i>
                 Campus News
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
+              </Link>
+              <Link
+                to="/internships"
+                className="group flex items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all tracking-wide uppercase relative py-1"
+              >
+                <i className="ri-briefcase-line text-lg group-hover:text-blue-600 transition-colors"></i>
+                Internships
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link
@@ -301,6 +312,7 @@ export default function Navbar() {
               { label: 'Home Terminal', path: '/', icon: 'ri-home-5-line', color: 'text-blue-400', bg: 'bg-blue-900/20' },
               { label: 'Marketplace', path: '/marketplace', icon: 'ri-compass-3-line', color: 'text-emerald-400', bg: 'bg-emerald-900/20' },
               { label: 'Campus News', path: '/news', icon: 'ri-newspaper-line', color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
+              { label: 'Internships', path: '/internships', icon: 'ri-briefcase-line', color: 'text-purple-400', bg: 'bg-purple-900/20' },
               { label: 'Help Center', path: '/support', icon: 'ri-customer-service-2-line', color: 'text-pink-400', bg: 'bg-pink-900/20' },
               {
                 label: 'Become a Seller',

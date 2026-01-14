@@ -8,6 +8,7 @@ import { useSiteContent, CONTENT_KEYS } from '../../hooks/useSiteContent';
 import Navbar from '../../components/feature/Navbar';
 import NewsletterSignup from '../../components/feature/NewsletterSignup';
 import AdSenseBanner from '../../components/feature/AdSenseBanner';
+import InternshipSlider from '../../components/feature/InternshipSlider';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -88,35 +89,35 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 w-full pt-16">
-          <div className="max-w-4xl">
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 md:mb-6 leading-[1.1] md:leading-[0.95] tracking-tight animate-fade-in-up">
+          <div className="max-w-4xl bg-gray-900/10 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl animate-fade-in-up">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 md:mb-6 leading-[1.1] md:leading-[0.95] tracking-tight drop-shadow-lg">
               Connect.<br />
-              <span className="text-blue-500">Succeed.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 drop-shadow-none">Succeed.</span>
             </h1>
 
             <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-10 mb-8 md:mb-10 animate-fade-in-up delay-100">
-              <p className="text-base md:text-xl text-gray-300 font-medium max-w-lg leading-relaxed">
+              <p className="text-base md:text-xl text-gray-200 font-medium max-w-lg leading-relaxed drop-shadow-md">
                 The premier digital platform for campus commerce. <br className="hidden md:block" />
-                <span className="text-white font-bold">Secure</span> transactions within your student community.
+                <span className="text-white font-bold bg-blue-600/20 px-2 py-0.5 rounded-md border border-blue-500/30">Secure</span> transactions within your student community.
               </p>
 
-              <div className="hidden md:flex flex-col border-l-2 border-blue-500 pl-4 mt-1">
+              <div className="hidden md:flex flex-col border-l-2 border-blue-500/50 pl-4 mt-1 backdrop-blur-sm bg-black/20 p-4 rounded-r-2xl border-y border-r border-white/5">
                 <span className="text-2xl font-bold text-white tracking-tight">2.5K+</span>
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide mt-1">Active Students</span>
+                <span className="text-[9px] font-bold text-gray-300 uppercase tracking-wide mt-1">Active Students</span>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 animate-fade-in-up delay-200">
               <Link
                 to="/marketplace"
-                className="group px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 active:scale-95"
+                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-900/30 hover:shadow-blue-600/40 flex items-center justify-center gap-3 active:scale-95 border border-white/10"
               >
                 Start Trading
                 <i className="ri-arrow-right-line text-lg group-hover:translate-x-1 transition-transform"></i>
               </Link>
               <Link
                 to={user ? "/seller/dashboard" : "/register"}
-                className="px-8 py-4 bg-white/5 backdrop-blur-md text-white border border-white/10 rounded-xl hover:bg-white/10 transition-all font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95"
+                className="px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-xl hover:bg-white/20 transition-all font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 shadow-lg"
               >
                 {user ? 'My Dashboard' : 'Join Community'}
                 <i className="ri-user-add-line text-lg"></i>
@@ -133,10 +134,10 @@ export default function Home() {
               onClick={() => setHeroSlide(i)}
               className="group relative flex items-center justify-end gap-4 transition-all cursor-pointer"
             >
-              <div className="text-right opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">View {i + 1}</p>
+              <div className="text-right opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10">
+                <p className="text-[9px] font-bold text-blue-300 uppercase tracking-widest">View {i + 1}</p>
               </div>
-              <div className={`w-1.5 h-12 rounded-full transition-all duration-500 overflow-hidden ${i === heroSlide ? 'bg-blue-500 h-16' : 'bg-white/10 hover:bg-white/20'}`}></div>
+              <div className={`w-1.5 h-12 rounded-full transition-all duration-500 overflow-hidden shadow-lg ${i === heroSlide ? 'bg-blue-500 h-16 shadow-blue-500/50' : 'bg-white/20 hover:bg-white/40'}`}></div>
             </button>
           ))}
         </div>
@@ -376,7 +377,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Newsletter Section - Digital Pulse */}
+      {/* Internship Opportunities Slider */}
+      <InternshipSlider />
       <section className="py-24 relative overflow-hidden bg-gray-900">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-indigo-800 to-gray-900 opacity-90"></div>
 

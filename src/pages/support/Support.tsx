@@ -55,79 +55,108 @@ export default function Support() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
             <Navbar />
 
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
-                <div className="text-center mb-16">
-                    <p className="text-blue-600 font-bold uppercase tracking-widest text-xs mb-4">Help Center</p>
-                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
-                        How can we <span className="text-blue-600">help you?</span>
+            {/* Header Section */}
+            <div className="relative bg-gray-900 overflow-hidden py-24 md:py-32">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-gray-900 to-gray-900 z-0"></div>
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[100px] opacity-50 z-0 animate-blob"></div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+                    <div className="inline-flex items-center justify-center p-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl mb-8 animate-fade-in-up">
+                        <i className="ri-customer-service-2-fill text-2xl text-blue-400"></i>
+                    </div>
+                    <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight animate-fade-in-up delay-100">
+                        How can we <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">help you?</span>
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-lg max-w-2xl mx-auto">
-                        Find answers to common questions or contact our support team directly. We're here to assist you with any issues.
+                    <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed animate-fade-in-up delay-200">
+                        Search our knowledge base, explore frequently asked questions, or contact our dedicated support team directly.
                     </p>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 -mt-20 relative z-20 pb-20">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16 animate-fade-in-up delay-300">
+                    {[
+                        { title: 'Student Accounts', icon: 'ri-account-circle-line', desc: 'Login, Profile, and Verification issues' },
+                        { title: 'Payments & Billing', icon: 'ri-bank-card-line', desc: 'Transactions, Refunds, and Fees' },
+                        { title: 'Marketplace', icon: 'ri-store-3-line', desc: 'Listing products and Vendor queries' }
+                    ].map((item, i) => (
+                        <div key={i} className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/20 dark:shadow-none border border-gray-100 dark:border-gray-700 hover:-translate-y-2 transition-transform duration-300 group cursor-pointer">
+                            <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <i className={`${item.icon} text-3xl text-blue-600 dark:text-blue-400`}></i>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{item.title}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{item.desc}</p>
+                        </div>
+                    ))}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     {/* Contact Form */}
-                    <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 md:p-10 shadow-lg shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800">
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Send us a message</h3>
+                    <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800 h-full">
+                        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Send Message</h3>
+                        <p className="text-gray-500 text-sm mb-10">Fill out the form below and we'll get back to you within 24 hours.</p>
 
                         {success ? (
-                            <div className="text-center py-12">
-                                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <i className="ri-check-line text-3xl text-green-600 dark:text-green-400"></i>
+                            <div className="text-center py-12 flex flex-col items-center justify-center h-[400px]">
+                                <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-8 animate-bounce">
+                                    <i className="ri-check-line text-4xl text-green-600 dark:text-green-400"></i>
                                 </div>
-                                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Message Sent!</h4>
-                                <p className="text-gray-500 dark:text-gray-400 mb-8">We'll get back to you as soon as possible.</p>
+                                <h4 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Request Received!</h4>
+                                <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-xs mx-auto">Our support team has been notified. Check your email for updates.</p>
                                 <button
                                     onClick={() => setSuccess(false)}
-                                    className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-xl text-sm uppercase tracking-wide hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                    className="px-8 py-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                                 >
-                                    Send Another
+                                    New Request
                                 </button>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Subject</label>
-                                    <select
-                                        value={subject}
-                                        onChange={(e) => setSubject(e.target.value)}
-                                        required
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-gray-900 dark:text-white cursor-pointer"
-                                    >
-                                        <option value="">Select a topic...</option>
-                                        <option value="account">Account Issues</option>
-                                        <option value="seller">Seller Application</option>
-                                        <option value="payment">Payments & Billing</option>
-                                        <option value="technical">Technical Bug</option>
-                                        <option value="other">Other Inquiry</option>
-                                    </select>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Support Topic</label>
+                                    <div className="relative group">
+                                        <i className="ri-list-settings-line absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 z-10"></i>
+                                        <select
+                                            value={subject}
+                                            onChange={(e) => setSubject(e.target.value)}
+                                            required
+                                            className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 rounded-xl focus:bg-white dark:focus:bg-gray-900 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-semibold text-gray-900 dark:text-white cursor-pointer appearance-none text-sm"
+                                        >
+                                            <option value="">Select a related topic...</option>
+                                            <option value="account">Account & Verification</option>
+                                            <option value="seller">Seller Application Status</option>
+                                            <option value="payment">Billing & Subscriptions</option>
+                                            <option value="technical">Report a Bug / Issue</option>
+                                            <option value="other">General Inquiry</option>
+                                        </select>
+                                        <i className="ri-arrow-down-s-line absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                    </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Message</label>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Detailed Description</label>
                                     <textarea
                                         value={message}
                                         onChange={(e) => setMessage(e.target.value)}
                                         required
-                                        placeholder="Describe your issue in detail..."
-                                        rows={5}
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-gray-900 dark:text-white resize-none"
+                                        placeholder="Please describe your issue clearly..."
+                                        rows={6}
+                                        className="w-full p-6 bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 rounded-2xl focus:bg-white dark:focus:bg-gray-900 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-gray-900 dark:text-white resize-none text-sm"
                                     ></textarea>
                                 </div>
 
-                                <div className="pt-4">
+                                <div className="pt-6">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full py-5 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-[0.98] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group"
                                     >
                                         {loading ? (
                                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                         ) : (
                                             <>
-                                                <span>Submit Request</span>
-                                                <i className="ri-send-plane-fill text-lg"></i>
+                                                <span>Submit Ticket</span>
+                                                <i className="ri-send-plane-fill text-lg group-hover:translate-x-1 transition-transform"></i>
                                             </>
                                         )}
                                     </button>
@@ -137,69 +166,69 @@ export default function Support() {
                     </div>
 
                     {/* Contact Info & FAQ */}
-                    <div className="space-y-8">
-                        <div className="bg-blue-600 rounded-[2rem] p-8 md:p-10 text-white relative overflow-hidden">
+                    <div className="space-y-8 flex flex-col">
+                        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-blue-900/20">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
 
-                            <h3 className="text-2xl font-bold mb-6 relative z-10">Direct Contact</h3>
-                            <div className="space-y-6 relative z-10">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
-                                        <i className="ri-mail-line text-xl"></i>
+                            <div className="relative z-10">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full mb-6 border border-white/20">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Live Support</span>
+                                </div>
+                                <h3 className="text-3xl font-bold mb-8">Direct Channels</h3>
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-5 p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition-colors cursor-pointer group">
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 text-blue-600 group-hover:scale-110 transition-transform">
+                                            <i className="ri-mail-send-fill text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Official Email</p>
+                                            <a href="mailto:support@pentvars.edu.gh" className="text-lg font-bold">support@pentvars.edu.gh</a>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Email Support</p>
-                                        <a href="mailto:support@pentvars.edu.gh" className="text-lg font-bold hover:text-blue-100 transition-colors">support@pentvars.edu.gh</a>
+
+                                    <div className="flex items-center gap-5 p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition-colors cursor-pointer group">
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 text-blue-600 group-hover:scale-110 transition-transform">
+                                            <i className="ri-customer-service-2-fill text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Helpline</p>
+                                            <a href="tel:+233123456789" className="text-lg font-bold">+233 123 456 789</a>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
-                                        <i className="ri-phone-line text-xl"></i>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Helpline</p>
-                                        <a href="tel:+233123456789" className="text-lg font-bold hover:text-blue-100 transition-colors">+233 123 456 789</a>
-                                        <p className="text-sm opacity-70 mt-1">Mon-Fri, 8am - 5pm</p>
-                                    </div>
-                                </div>
-
-
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 border border-gray-100 dark:border-gray-800">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Quick FAQ</h3>
+                        <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-10 border border-gray-100 dark:border-gray-800 flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-3">
+                                <i className="ri-question-answer-line text-blue-500"></i>
+                                Common Questions
+                            </h3>
                             <div className="space-y-4">
-                                <details className="group">
-                                    <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors text-sm">
-                                        <span>How do I become a seller?</span>
-                                        <i className="ri-arrow-down-s-line group-open:rotate-180 transition-transform text-lg"></i>
-                                    </summary>
-                                    <p className="text-gray-500 dark:text-gray-400 mt-3 text-sm leading-relaxed">
-                                        Go to the "Become a Seller" page in the navigation menu, fill out the application form with your business details, and wait for admin approval.
-                                    </p>
-                                </details>
-                                <div className="h-px bg-gray-100 dark:bg-gray-800"></div>
-                                <details className="group">
-                                    <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors text-sm">
-                                        <span>Is it free to list products?</span>
-                                        <i className="ri-arrow-down-s-line group-open:rotate-180 transition-transform text-lg"></i>
-                                    </summary>
-                                    <p className="text-gray-500 dark:text-gray-400 mt-3 text-sm leading-relaxed">
-                                        Yes, listing products is currently free for all verified students of Pentecost University.
-                                    </p>
-                                </details>
-                                <div className="h-px bg-gray-100 dark:bg-gray-800"></div>
-                                <details className="group">
-                                    <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors text-sm">
-                                        <span>How do I delete my account?</span>
-                                        <i className="ri-arrow-down-s-line group-open:rotate-180 transition-transform text-lg"></i>
-                                    </summary>
-                                    <p className="text-gray-500 dark:text-gray-400 mt-3 text-sm leading-relaxed">
-                                        Please submit a support request with the subject "Account Issues" and we will process your deletion request manually.
-                                    </p>
-                                </details>
+                                {[
+                                    { q: "How do I become a seller?", a: "Navigate to 'Become a Seller' in the menu, complete the application form, and wait for admin approval (approx. 24hrs)." },
+                                    { q: "Is listing products free?", a: "Yes! Currently, all student listings are completely free of charge to support campus commerce." },
+                                    { q: "Can I manage multiple shops?", a: "Currently, each student account is limited to one unified seller profile to ensure quality and trust." }
+                                ].map((faq, i) => (
+                                    <div key={i}>
+                                        <details className="group">
+                                            <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm py-2">
+                                                <span>{faq.q}</span>
+                                                <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center group-open:bg-blue-50 dark:group-open:bg-blue-900/30 transition-colors">
+                                                    <i className="ri-add-line group-open:rotate-45 transition-transform duration-300"></i>
+                                                </div>
+                                            </summary>
+                                            <div className="overflow-hidden h-0 group-open:h-auto transition-all duration-300">
+                                                <p className="text-gray-500 dark:text-gray-400 py-3 text-sm leading-relaxed border-l-2 border-blue-500/20 pl-4 ml-1 mb-2">
+                                                    {faq.a}
+                                                </p>
+                                            </div>
+                                        </details>
+                                        {i !== 2 && <div className="h-px bg-gray-100 dark:bg-gray-800 my-2"></div>}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

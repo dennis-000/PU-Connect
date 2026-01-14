@@ -34,6 +34,7 @@ const SubscriptionManagement = lazy(() => import('../pages/admin/SubscriptionMan
 const RoleManagement = lazy(() => import('../pages/admin/RoleManagement'));
 const NewsPublisherDashboard = lazy(() => import('../pages/publisher/NewsPublisherDashboard'));
 const Support = lazy(() => import('../pages/support/Support'));
+const Internships = lazy(() => import('../pages/internships/Internships'));
 
 const routes: RouteObject[] = [
   {
@@ -249,6 +250,10 @@ const routes: RouteObject[] = [
         <NewsPublisherDashboard />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: '/internships',
+    element: <Internships />,
   },
   {
     path: '*',

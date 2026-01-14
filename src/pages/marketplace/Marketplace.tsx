@@ -86,181 +86,215 @@ function Marketplace() {
   }, [searchParams, setSearchParams]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <Navbar />
 
-      <section className="relative py-16 md:py-32 overflow-hidden bg-gray-950">
-        {/* Background Image Overlay */}
-        <div className="absolute inset-0 z-0 text-center">
-          <img
-            src={bannerUrl}
-            alt="Campus Aerial"
-            className="w-full h-full object-cover opacity-30 mix-blend-overlay"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-900/40 to-transparent"></div>
-        </div>
+      {/* Hero Section - Marketplace Hub */}
+      <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-gray-900">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-gray-900 to-gray-900 z-0"></div>
+        {/* Animated Orbs */}
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] opacity-40 animate-blob mix-blend-screen"></div>
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] opacity-40 animate-blob animation-delay-2000 mix-blend-screen"></div>
 
-        <div className="max-w-[1600px] mx-auto px-6 md:px-12 relative z-10">
-          {/* Market Exchange Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
-            <div className="text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wide rounded-full mb-6">
-                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                Campus Exchange
-              </div>
-              <h1 className="text-5xl md:text-[6rem] font-bold text-white leading-[0.9] tracking-tight mb-6">
-                Product<br /><span className="text-blue-400">Catalogue.</span>
-              </h1>
-              <p className="text-gray-400 font-bold uppercase tracking-wide text-[10px]">
-                OFFICIAL UNIVERSITY COMMERCE PLATFORM
-              </p>
-            </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 backdrop-blur-md rounded-full mb-8 shadow-lg animate-fade-in-up">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white">Live Market</span>
+          </div>
 
-            <div className="w-full md:w-auto">
-              <form
-                onSubmit={(e) => { e.preventDefault(); setDebouncedSearch(searchQuery); }}
-                className="relative group max-w-xl mx-auto"
+          <h1 className="text-5xl md:text-8xl font-bold text-white mb-8 tracking-tight leading-none animate-fade-in-up delay-100 drop-shadow-2xl">
+            Campus <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Commerce.</span>
+          </h1>
+
+          {/* Search Bar - Glassmorphism */}
+          <div className="max-w-2xl mx-auto relative group animate-fade-in-up delay-200 z-20">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+            <form
+              onSubmit={(e) => { e.preventDefault(); setDebouncedSearch(searchQuery); }}
+              className="relative flex items-center bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-2xl"
+            >
+              <i className="ri-search-2-line text-2xl text-gray-400 ml-4 pointer-events-none"></i>
+              <input
+                type="text"
+                placeholder="Search for textbooks, gadgets, services..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent border-none text-white placeholder-gray-500 focus:ring-0 text-lg font-medium px-4 h-12"
+              />
+              <button
+                type="submit"
+                className="px-8 h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-95 text-xs uppercase tracking-widest"
               >
-                <i className="ri-search-2-line absolute left-6 top-1/2 -translate-y-1/2 text-xl text-gray-400 group-focus-within:text-blue-400 pointer-events-none"></i>
-                <input
-                  type="text"
-                  placeholder="Identify your needs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-16 pr-32 py-5 bg-white/10 border border-white/10 rounded-2xl focus:bg-white/20 focus:border-blue-400 outline-none transition-all font-semibold text-white placeholder-gray-400 text-lg backdrop-blur-md"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-2 bottom-2 px-6 bg-blue-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-blue-500 transition-all shadow-lg active:scale-95"
-                >
-                  Search
-                </button>
-              </form>
-            </div>
+                Search
+              </button>
+            </form>
           </div>
         </div>
       </section>
 
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 py-12 md:py-20">
-
-        {/* Category Matrix - Clean Simple Design */}
-        <div className="mb-16 border-b border-gray-100 dark:border-gray-800 overflow-x-auto no-scrollbar">
-          <div className="flex gap-8 md:gap-12 min-w-max px-2">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategorySelect(category.id)}
-                className={`relative pb-4 font-bold text-xs uppercase tracking-widest transition-all cursor-pointer whitespace-nowrap ${selectedCategory === category.id
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-              >
-                {category.name}
-                {selectedCategory === category.id && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                )}
-              </button>
-            ))}
-          </div>
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20">
+        {/* Category Pills - Floating Scroll */}
+        <div className="flex gap-4 overflow-x-auto pb-8 pt-4 no-scrollbar mask-gradient px-4 justify-start md:justify-center">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => handleCategorySelect(category.id)}
+              className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all duration-300 font-bold text-xs uppercase tracking-wide shadow-lg whitespace-nowrap group ${selectedCategory === category.id
+                ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/30 scale-105'
+                : 'bg-white dark:bg-gray-800 border-white dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600'
+                }`}
+            >
+              <i className={`${category.icon} text-lg ${selectedCategory === category.id ? 'text-white' : 'text-gray-400 group-hover:text-blue-500'}`}></i>
+              {category.name}
+            </button>
+          ))}
         </div>
 
-        {/* Inventory Ledger */}
-        {productsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className="h-[500px] bg-gray-50 dark:bg-gray-900 rounded-2xl animate-pulse"></div>
-            ))}
-          </div>
-        ) : filteredAndSortedProducts?.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-            {filteredAndSortedProducts.map((product) => {
-              const seller = product.seller as Profile;
-              return (
-                <div
-                  key={product.id}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-700 group cursor-pointer"
-                >
-                  <div className="relative h-72 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 mb-8">
-                    {product.images?.[0] ? (
-                      <img
-                        src={getOptimizedImageUrl(product.images[0], 600, 85)}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-200 dark:text-gray-700">
-                        <i className="ri-image-2-line text-7xl"></i>
-                      </div>
-                    )}
-                    <div className="absolute top-6 right-6">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavoriteMutation.mutate(product.id);
-                        }}
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-95 cursor-pointer ${favorites.includes(product.id)
-                          ? 'bg-rose-500 text-white'
-                          : 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-gray-400 hover:text-rose-500'
-                          }`}
-                      >
-                        <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
-                      </button>
-                    </div>
-                    <div className="absolute bottom-6 left-6">
-                      <span className="px-3 py-1.5 bg-gray-900/90 backdrop-blur-md text-white text-[9px] font-bold uppercase tracking-widest rounded-lg">
-                        {product.category}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="px-4 pb-4">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 truncate tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {product.name}
-                    </h3>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Price</span>
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-                          {product.price_type === 'fixed' ? `₵${product.price?.toLocaleString()}` : 'Contact'}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
-                          <p className="text-[10px] font-bold text-gray-900 dark:text-gray-200 uppercase tracking-widest leading-none mb-1">{seller?.full_name?.split(' ')[0]}</p>
-                          <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Seller</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm">
-                          <img
-                            src={getOptimizedImageUrl(seller?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100", 100, 85)}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-40 text-center bg-gray-50 dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800">
-            <div className="w-24 h-24 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-10 shadow-lg">
-              <i className="ri-search-line text-4xl text-gray-200 dark:text-gray-700"></i>
+        {/* Main Content Area */}
+        <div className="py-12">
+          {/* Results Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                {selectedCategory === 'all' ? 'All Collections' : categories.find(c => c.id === selectedCategory)?.name}
+                <span className="text-sm font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-1 rounded-md border border-gray-200 dark:border-white/5">
+                  {filteredAndSortedProducts.length}
+                </span>
+              </h2>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">No products found.</h3>
-            <p className="text-gray-400 font-semibold uppercase tracking-widest text-xs">Try adjusting your search or filters.</p>
-            <button
-              onClick={() => { setSelectedCategory('all'); setSearchQuery(''); setPriceRange('all'); setSortBy('newest'); }}
-              className="mt-10 px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-600 dark:hover:bg-blue-400 transition-all cursor-pointer shadow-lg"
-            >
-              Reset Search
-            </button>
+
+            <div className="flex items-center gap-4">
+              {/* Sort Dropdown */}
+              <div className="relative group z-30">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 py-3 pl-4 pr-10 rounded-xl font-bold text-xs uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:shadow-md transition-all"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                </select>
+                <i className="ri-arrow-down-s-line absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Product Grid */}
+          {productsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 h-[450px] animate-pulse border border-gray-100 dark:border-gray-800">
+                  <div className="bg-gray-100 dark:bg-gray-800 h-64 rounded-[1.5rem] mb-4"></div>
+                  <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-3/4 mb-3"></div>
+                  <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : filteredAndSortedProducts?.length ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {filteredAndSortedProducts.map((product) => {
+                const seller = product.seller as Profile;
+                return (
+                  <div
+                    key={product.id}
+                    onClick={() => navigate(`/product/${product.id}`)}
+                    className="group relative bg-white dark:bg-gray-900 rounded-[2rem] p-3 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 cursor-pointer hover:-translate-y-2 dark:hover:bg-gray-800/50"
+                  >
+                    {/* Image Container */}
+                    <div className="relative aspect-[4/5] rounded-[1.5rem] overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4 ">
+                      {product.images?.[0] ? (
+                        <img
+                          src={getOptimizedImageUrl(product.images[0], 600, 85)}
+                          alt={product.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
+                          <i className="ri-image-2-line text-6xl"></i>
+                        </div>
+                      )}
+
+                      {/* Overlay Gradient on Hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                      <div className="absolute top-4 right-4 z-10">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavoriteMutation.mutate(product.id);
+                          }}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 backdrop-blur-md ${favorites.includes(product.id)
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-white/80 dark:bg-black/50 text-gray-600 dark:text-white hover:bg-rose-500 hover:text-white'
+                            }`}
+                        >
+                          <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
+                        </button>
+                      </div>
+
+                      <div className="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                        <button className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl text-xs uppercase tracking-widest shadow-lg hover:bg-blue-50 transition-colors">
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="px-3 pb-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded-lg">
+                          {product.category}
+                        </span>
+                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wide">
+                          <i className="ri-time-line"></i>
+                          <span>New</span>
+                        </div>
+                      </div>
+
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                        {product.name}
+                      </h3>
+
+                      <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Price</span>
+                          <span className="text-xl font-bold text-gray-900 dark:text-white">
+                            {product.price_type === 'fixed' ? `₵${product.price?.toLocaleString()}` : 'Contact'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 pl-3 border-l border-gray-100 dark:border-gray-800">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                            <img src={getOptimizedImageUrl(seller?.avatar_url || "", 50, 50)} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-32 text-center">
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full mb-8">
+                <i className="ri-search-line text-4xl text-gray-400"></i>
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">No results found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-8 font-medium">We couldn't find any products matching your search.</p>
+              <button
+                onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}
+                className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest text-xs"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

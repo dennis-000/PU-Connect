@@ -134,7 +134,7 @@ export default function SellerApplication() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Information Section */}
-          <div className="lg:col-span-4 space-y-8">
+          <div className="lg:col-span-4 space-y-8 animate-fade-in-up delay-100">
             <div className="bg-gray-900 dark:bg-gray-800 text-white p-8 rounded-[2rem] shadow-xl shadow-gray-900/10 dark:shadow-none transition-colors">
               <h3 className="text-xl font-bold mb-8 tracking-tight flex items-center gap-3">
                 <i className="ri-information-line text-blue-400"></i>
@@ -166,7 +166,7 @@ export default function SellerApplication() {
           </div>
 
           {/* Form Section */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 animate-slide-in-right delay-200">
             <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl shadow-gray-200/40 dark:shadow-none border border-gray-100 dark:border-gray-800 p-8 md:p-12 transition-colors duration-300">
               <form onSubmit={handleSubmit} className="space-y-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
