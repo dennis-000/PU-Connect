@@ -13,15 +13,16 @@ export default function Support() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!user) {
+            alert('Please login to submit a ticket');
+            return;
+        }
+
         if (!subject || !message) return;
 
         setLoading(true);
         try {
-            if (!user) {
-                alert('Please login to submit a ticket');
-                return;
-            }
-
             const { error } = await supabase.from('support_tickets').insert({
                 user_id: user.id,
                 subject,
@@ -30,14 +31,17 @@ export default function Support() {
                 priority: 'medium'
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase Support Ticket Insert Error:', error);
+                throw error;
+            }
 
             setSuccess(true);
             setSubject('');
             setMessage('');
-        } catch (error) {
-            console.error('Error sending support request:', error);
-            alert('Failed to send request. Please try again.');
+        } catch (error: any) {
+            console.error('Error details:', error);
+            alert(`Failed to send request: ${error.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
