@@ -99,7 +99,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans overflow-hidden relative selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans overflow-x-hidden relative selection:bg-blue-500 selection:text-white">
       {/* Background Blobs (Global) */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full mix-blend-multiply blur-3xl opacity-50 animate-blob"></div>
@@ -161,7 +161,7 @@ export default function Register() {
             </Link>
           </div>
 
-          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/50 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group/card hover:shadow-blue-500/10 transition-shadow duration-500">
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/50 dark:border-slate-800 rounded-3xl lg:rounded-[2.5rem] p-6 md:p-8 relative shadow-2xl overflow-hidden group/card hover:shadow-blue-500/10 transition-shadow duration-500">
             {/* Subtle Gradient Glow inside Card */}
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/20 blur-[60px] rounded-full group-hover/card:bg-purple-500/30 transition-all duration-500"></div>
 
@@ -200,7 +200,7 @@ export default function Register() {
                         type="text"
                         value={formData.fullName}
                         onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
+                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-base md:text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
                         placeholder="Enter your full name"
                       />
                     </div>
@@ -218,7 +218,7 @@ export default function Register() {
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
+                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-base md:text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
                         placeholder="e.g. 0551234567"
                       />
                     </div>
@@ -235,7 +235,7 @@ export default function Register() {
                         required
                         value={formData.faculty}
                         onChange={(e) => setFormData({ ...formData, faculty: e.target.value })}
-                        className="block w-full pl-12 pr-10 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none appearance-none focus:bg-white dark:focus:bg-slate-900 transition-all text-slate-600 dark:text-slate-300"
+                        className="block w-full pl-12 pr-10 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-base md:text-sm font-semibold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none appearance-none focus:bg-white dark:focus:bg-slate-900 transition-all text-slate-600 dark:text-slate-300"
                       >
                         <option value="" disabled>Select your faculty</option>
                         <option value="Faculty of Business">Faculty of Business</option>
@@ -262,7 +262,7 @@ export default function Register() {
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
+                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-base md:text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
                         placeholder="Enter your email address"
                       />
                     </div>
@@ -305,7 +305,7 @@ export default function Register() {
                         type={showPassword ? "text" : "password"}
                         value={formData.confirmPassword}
                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
+                        className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-base md:text-sm font-semibold transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-900"
                         placeholder="••••••••"
                       />
                     </div>

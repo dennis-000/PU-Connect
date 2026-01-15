@@ -309,7 +309,7 @@ export default function UserManagement() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by name, email, or ID..."
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 font-medium text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 font-medium text-base md:text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all"
                 />
               </div>
             </div>
@@ -522,7 +522,7 @@ export default function UserManagement() {
                   type="text"
                   value={editData.department}
                   onChange={(e) => setEditData({ ...editData, department: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-gray-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-gray-900 dark:text-white font-bold text-base md:text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
                   placeholder="e.g. Computer Science"
                 />
               </div>
@@ -534,7 +534,7 @@ export default function UserManagement() {
                   type="tel"
                   value={editData.phone}
                   onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-gray-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-gray-900 dark:text-white font-bold text-base md:text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
                   placeholder="e.g. 0540000000"
                 />
               </div>
