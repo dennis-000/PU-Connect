@@ -353,10 +353,15 @@ export default function AdminDashboard() {
       });
       if (profileError && profileError.code !== '23505') throw profileError;
 
-      const { error: roleError } = await supabase.from('profiles').update({ role: 'seller' }).eq('id', userId);
-      if (roleError) throw roleError;
+      // Update the user's role to 'seller' in the profiles table ONLY if they are not already an admin
+      const { data: userProfile } = await supabase.from('profiles').select('role').eq('id', userId).single();
 
-      setNotification({ type: 'success', message: '✅ Seller approved successfully!' });
+      if (userProfile?.role !== 'admin' && userProfile?.role !== 'super_admin') {
+        const { error: roleError } = await supabase.from('profiles').update({ role: 'seller' }).eq('id', userId);
+        if (roleError) throw roleError;
+      }
+
+      setNotification({ type: 'success', message: '✅ Seller approved and role updated!' });
       fetchData();
     } catch (err: any) {
       console.error('Approval error:', err);
