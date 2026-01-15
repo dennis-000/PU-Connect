@@ -7,7 +7,7 @@ import ImageUploader from '../../components/base/ImageUploader';
 
 export default function SellerApplication() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
   const [formData, setFormData] = useState({
@@ -41,14 +41,21 @@ export default function SellerApplication() {
     }
   }, [notification]);
 
+  useEffect(() => {
+    if (authLoading) return; // Wait for auth to initialize
+
+    if (!user) {
+      // Only redirect if absolutely sure user is not logged in and auth finished loading
+      setNotification({ type: 'error', message: 'Please login to apply as a seller' });
+      const t = setTimeout(() => navigate('/login'), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [user, authLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      setNotification({ type: 'error', message: 'Please login to apply as a seller' });
-      setTimeout(() => navigate('/login'), 2000);
-      return;
-    }
+    if (!user) return;
 
     // Check if user is already a seller
     if (profile?.role === 'seller') {
@@ -99,7 +106,7 @@ export default function SellerApplication() {
 
       if (error) throw error;
 
-      // Notify Admins via SMS
+      // Notify Admins
       try {
         const { data: admins } = await supabase
           .from('profiles')
@@ -108,10 +115,9 @@ export default function SellerApplication() {
           .not('phone', 'is', null);
 
         if (admins && admins.length > 0) {
-          const adminPhones = admins.map(a => a.phone).filter(p => p && p.length > 9); // Basic validation
+          const adminPhones = admins.map(a => a.phone).filter(p => p && p.length > 9);
           if (adminPhones.length > 0) {
             import('../../lib/arkesel').then(({ sendSMS }) => {
-              // Send mostly to unique numbers to save cost/avoid spam if duplicate admins
               const uniquePhones = [...new Set(adminPhones)];
               sendSMS(uniquePhones, `New Seller Application: ${formData.businessName} has applied to become a seller. Please check the Admin Portal for review.`)
                 .catch(err => console.error('Failed to notify admins:', err));
