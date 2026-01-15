@@ -21,7 +21,7 @@ export default function Home() {
   const { url: heroMain } = useSiteContent(CONTENT_KEYS.HOME_HERO_MAIN);
   const { url: heroAerial } = useSiteContent(CONTENT_KEYS.HOME_HERO_AERIAL);
 
-  const heroImages = [heroMain, heroAerial];
+  const heroImages = [heroMain, heroAerial, '/image 1.jpg'];
 
   // Get featured products (first 4 products)
   const featuredProducts = allProducts.slice(0, 4);
@@ -76,7 +76,7 @@ export default function Home() {
               <img
                 src={img}
                 alt={`Campus View ${index + 1}`}
-                className={`w-full h-full object-cover object-center transition-transform duration-[10s] ease-linear ${index === heroSlide ? 'scale-110' : 'scale-100'
+                className={`w-full h-full object-cover object-top transition-transform duration-[10s] ease-linear ${index === heroSlide ? 'scale-110' : 'scale-100'
                   }`}
               />
             </div>

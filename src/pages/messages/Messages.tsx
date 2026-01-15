@@ -11,8 +11,10 @@ export default function Messages() {
   const { messages, isLoading: loadingMsgs, sendMessage: sendMsgMutation, markAsRead } = useMessages(selectedConversation?.id || null);
 
   const [newMessage, setNewMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showConversationList, setShowConversationList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (conversations.length > 0 && !selectedConversation) {
@@ -50,9 +52,25 @@ export default function Messages() {
     setSelectedConversation(null);
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('File size too large. Please select a file under 5MB.');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || !user) return;
+    if ((!newMessage.trim() && !selectedFile) || !selectedConversation || !user) return;
 
     const receiverId = selectedConversation.buyer_id === user.id
       ? selectedConversation.seller_id
@@ -60,10 +78,12 @@ export default function Messages() {
 
     sendMsgMutation.mutate({
       message: newMessage.trim(),
-      receiverId
+      receiverId,
+      file: selectedFile || undefined
     }, {
       onSuccess: () => {
         setNewMessage('');
+        handleRemoveFile();
       }
     });
   };
@@ -258,7 +278,37 @@ export default function Messages() {
                               : 'bg-white text-gray-900 rounded-tl-none border border-gray-100'
                               }`}
                           >
-                            <p className="text-sm leading-relaxed">{message.message}</p>
+                            {message.attachment_url && (
+                              <div className="mb-3">
+                                {message.attachment_type === 'image' ? (
+                                  <a href={message.attachment_url} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={message.attachment_url}
+                                      alt="Attachment"
+                                      className="rounded-xl max-w-full max-h-[200px] object-cover border border-white/10"
+                                      loading="lazy"
+                                    />
+                                  </a>
+                                ) : (
+                                  <a
+                                    href={message.attachment_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-3 p-3 rounded-xl ${isSender ? 'bg-white/10' : 'bg-gray-100'}`}
+                                  >
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSender ? 'bg-white/20' : 'bg-white'}`}>
+                                      <i className="ri-file-text-line text-xl"></i>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-bold truncate">Attachment</p>
+                                      <p className="text-[10px] opacity-70 uppercase">Click to view</p>
+                                    </div>
+                                    <i className="ri-external-link-line"></i>
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {message.message && <p className="text-sm leading-relaxed">{message.message}</p>}
                             <div
                               className={`flex items-center justify-end mt-2 space-x-1 ${isSender ? 'text-blue-200' : 'text-gray-400'
                                 }`}
@@ -282,28 +332,76 @@ export default function Messages() {
 
                   {/* Message Input Container */}
                   <div className="p-4 sm:p-6 bg-white border-t border-gray-50">
-                    <form onSubmit={handleSendMessage} className="relative">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Compose your message..."
-                        className="w-full pl-6 pr-32 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all"
-                        disabled={sendMsgMutation.isPending}
-                      />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
-                        <button
-                          type="submit"
-                          disabled={sendMsgMutation.isPending || !newMessage.trim()}
-                          className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-black transition-all text-xs font-bold uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
-                        >
-                          {sendMsgMutation.isPending ? (
-                            <i className="ri-loader-4-line animate-spin"></i>
+                    {/* File Preview */}
+                    {selectedFile && (
+                      <div className="mb-4 flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100 animate-fade-in-up">
+                        <div className="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
+                          {selectedFile.type.startsWith('image/') ? (
+                            <img
+                              src={URL.createObjectURL(selectedFile)}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <i className="ri-send-plane-fill"></i>
+                            <i className="ri-file-text-line text-2xl text-gray-400"></i>
                           )}
-                          <span>Send</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">{selectedFile.name}</p>
+                          <p className="text-[10px] text-gray-500 font-medium">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleRemoveFile}
+                          className="w-8 h-8 rounded-full bg-gray-200 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                        >
+                          <i className="ri-close-line"></i>
                         </button>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSendMessage} className="relative flex items-end gap-3">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-12 h-14 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-blue-600 rounded-2xl flex items-center justify-center transition-colors border border-transparent hover:border-gray-200 flex-shrink-0"
+                        title="Attach file"
+                      >
+                        <i className="ri-attachment-2 text-xl"></i>
+                      </button>
+
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Compose your message..."
+                          className="w-full pl-6 pr-32 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all"
+                          disabled={sendMsgMutation.isPending}
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                          <button
+                            type="submit"
+                            disabled={sendMsgMutation.isPending || (!newMessage.trim() && !selectedFile)}
+                            className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-black transition-all text-xs font-bold uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+                          >
+                            {sendMsgMutation.isPending ? (
+                              <i className="ri-loader-4-line animate-spin"></i>
+                            ) : (
+                              <i className="ri-send-plane-fill"></i>
+                            )}
+                            <span>Send</span>
+                          </button>
+                        </div>
                       </div>
                     </form>
                   </div>

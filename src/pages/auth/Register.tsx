@@ -72,9 +72,9 @@ export default function Register() {
         {/* Background Image & Overlays */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/Pentecost-University-Sowutoum-Ghana-SchoolFinder-TortoisePathcom-11.jpeg"
+            src="/image%201.jpg"
             alt="Pentecost University"
-            className="w-full h-full object-cover object-bottom opacity-40 scale-105 transition-transform duration-[20s] hover:scale-110"
+            className="w-full h-full object-cover object-top opacity-40 scale-105 transition-transform duration-[20s] hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/90 via-slate-900/80 to-transparent"></div>
           {/* Animated Mesh Grid Overlay */}
