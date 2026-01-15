@@ -122,7 +122,7 @@ export default function AddProduct() {
 
     try {
       const productData = {
-        seller_id: formData.sellerId,
+        seller_id: isAdmin ? formData.sellerId : profile?.id,
         name: formData.name.trim(),
         description: formData.description.trim(),
         category: formData.category,
