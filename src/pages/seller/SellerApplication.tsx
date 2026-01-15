@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,8 +7,9 @@ import ImageUploader from '../../components/base/ImageUploader';
 
 export default function SellerApplication() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
   const [formData, setFormData] = useState({
     businessName: '',
     businessCategory: '',
@@ -32,12 +33,27 @@ export default function SellerApplication() {
     'Other'
   ];
 
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) {
-      alert('Please login to apply as a seller');
-      navigate('/login');
+      setNotification({ type: 'error', message: 'Please login to apply as a seller' });
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
+
+    // Check if user is already a seller
+    if (profile?.role === 'seller') {
+      setNotification({ type: 'warning', message: 'You are already a seller! You cannot apply again.' });
+      setTimeout(() => navigate('/seller/dashboard'), 2000);
       return;
     }
 
@@ -53,12 +69,15 @@ export default function SellerApplication() {
 
       if (existingApp) {
         if (existingApp.status === 'approved') {
-          alert('You already have an active Seller Account. You are limited to one shop per user.');
-          navigate('/seller/dashboard');
+          setNotification({ type: 'warning', message: 'You already have an active Seller Account. You are limited to one shop per user.' });
+          setTimeout(() => navigate('/seller/dashboard'), 2000);
+        } else if (existingApp.status === 'pending') {
+          setNotification({ type: 'info', message: 'You already have a pending application. Please wait for admin approval.' });
+          setTimeout(() => navigate('/seller/status'), 2000);
         } else {
-          alert('You already have a pending seller application. Please wait for the admin to approve your request.');
-          navigate('/seller/status');
+          setNotification({ type: 'warning', message: 'You have a previous application. Please contact support.' });
         }
+        setLoading(false);
         return;
       }
 
@@ -103,11 +122,12 @@ export default function SellerApplication() {
         console.error('Error fetching admins for notification:', notifyError);
       }
 
-      alert('Application submitted successfully! Redirecting to status page...');
-      navigate('/seller/status');
+
+      setNotification({ type: 'success', message: '✅ Application submitted successfully! Redirecting to status page...' });
+      setTimeout(() => navigate('/seller/status'), 2000);
     } catch (error: any) {
       console.error('Error submitting application:', error);
-      alert('Failed to submit application. Please try again.');
+      setNotification({ type: 'error', message: error.message || 'Failed to submit application. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -116,6 +136,28 @@ export default function SellerApplication() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
       <Navbar />
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-right fade-in duration-300">
+          <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-bold backdrop-blur-xl border max-w-md ${notification.type === 'success' ? 'bg-emerald-600/90 border-emerald-500/50' :
+            notification.type === 'error' ? 'bg-rose-600/90 border-rose-500/50' :
+              notification.type === 'warning' ? 'bg-amber-600/90 border-amber-500/50' :
+                'bg-blue-600/90 border-blue-500/50'
+            }`}>
+            <i className={`text-2xl ${notification.type === 'success' ? 'ri-checkbox-circle-line' :
+              notification.type === 'error' ? 'ri-error-warning-line' :
+                notification.type === 'warning' ? 'ri-alert-line' :
+                  'ri-information-line'
+              }`}></i>
+            <p className="flex-1">{notification.message}</p>
+            <button onClick={() => setNotification(null)} className="hover:opacity-70 transition-opacity">
+              <i className="ri-close-line text-xl"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
           <div className="text-center md:text-left">

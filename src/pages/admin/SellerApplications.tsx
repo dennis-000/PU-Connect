@@ -91,11 +91,19 @@ export default function SellerApplications() {
 
     setProcessing(true);
     try {
+      // Check if admin ID is a valid UUID (system admin has text ID)
+      // If we are the system admin (or any non-UUID), we pass null to reviewed_by
+      // because the column is UUID type.
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile?.id || '');
+      const reviewedBy = isValidUUID ? profile?.id : null;
+
       // Update application status
       const { error: appError } = await supabase
         .from('seller_applications')
         .update({
           status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: reviewedBy,
           updated_at: new Date().toISOString()
         })
         .eq('id', application.id);

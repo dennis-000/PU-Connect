@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase, type SellerApplication, type Profile } from '../../lib/supabase';
+import { supabase, type SellerApplication, type Profile, type Product } from '../../lib/supabase';
 import Navbar from '../../components/feature/Navbar';
+import { getOptimizedImageUrl } from '../../lib/imageOptimization';
 import {
   BarChart,
   Bar,
@@ -29,6 +30,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [applications, setApplications] = useState<(SellerApplication & { user: Profile })[]>([]);
+  const [allProducts, setAllProducts] = useState<(Product & { seller: Profile })[]>([]);
   const [smsHistory, setSmsHistory] = useState<SMSHistory[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
 
@@ -57,7 +59,7 @@ export default function AdminDashboard() {
   }>({ faculties: [], departments: [], recentGrowth: [] });
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'analytics' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity'>('overview');
   const [processing, setProcessing] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -128,7 +130,7 @@ export default function AdminDashboard() {
     try {
       console.log('📊 Fetching dashboard data...');
 
-      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsRes, servicesRes, newsRes, ticketsRes, logsRes, analyticsRes] = await Promise.all([
+      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes] = await Promise.all([
         supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(100),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'seller'),
@@ -139,10 +141,37 @@ export default function AdminDashboard() {
         supabase.from('campus_news').select('id', { count: 'exact', head: true }).eq('is_published', true),
         supabase.from('support_tickets').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress']),
         supabase.from('activity_logs').select('*, user:profiles!user_id(full_name)').order('created_at', { ascending: false }).limit(20),
-        supabase.from('profiles').select('faculty, department, created_at')
-      ]);
+        supabase.from('profiles').select('faculty, department, created_at'),
+        // Fetch ALL products for admin management
+        supabase.from('products').select('*, seller:profiles!products_seller_id_fkey(full_name, email, phone)').order('created_at', { ascending: false }).limit(200)
+      ])
+      setRecentLogs(logsRes.data || []);
 
-      console.log('📋 Applications response:', { error: appsRes.error, count: appsRes.data?.length });
+      // Set Products Data
+      if (allProductsRes && allProductsRes.data) {
+        setAllProducts(allProductsRes.data as any || []);
+      } else {
+        // Fallback if index shifted (it shouldn't if added at end)
+        // Actually Promise.all returns array in order. The last item is the new one (index 11).
+        // But typescript inference might be tricky here.
+        // Let's use a separate query or trust the array index 11.
+        // Wait, I added it as the 12th element (index 11).
+        // Let's be safe and refetch active products separately? No, that's wasteful.
+        // I'll cast the 12th result.
+      }
+
+      console.log('📋 Applications response:', {
+        error: appsRes.error,
+        count: appsRes.data?.length
+      });
+
+      // TEST: Try a simple query without join
+      const testQuery = await supabase.from('seller_applications').select('*');
+      console.log('🧪 TEST - Simple query (no join):', {
+        error: testQuery.error,
+        count: testQuery.data?.length,
+        data: testQuery.data
+      });
 
       // Handle applications - robust fallback mechanism
       if (appsRes.error) {
@@ -214,8 +243,8 @@ export default function AdminDashboard() {
         admins: adminsRes.count || 0,
         publishers: publishersRes.count || 0,
         buyers: totalUsers - (sellersRes.count || 0) - (adminsRes.count || 0) - (publishersRes.count || 0),
-        products_count: productsRes.count || 0,
-        services_count: servicesRes.count || 0,
+        products_count: productsCountRes.count || 0,
+        services_count: servicesCountRes.count || 0,
         pending: pendingCount,
         approved: approvedCount,
         rejected: rejectedCount,
@@ -301,7 +330,15 @@ export default function AdminDashboard() {
       const app = applications.find(a => a.id === applicationId);
       if (!app) throw new Error('Application not found');
 
-      const { error: appError } = await supabase.from('seller_applications').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: profile?.id }).eq('id', applicationId);
+      // Check if admin ID is a valid UUID (system admin has text ID)
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile?.id || '');
+      const reviewedBy = isValidUUID ? profile?.id : null;
+
+      const { error: appError } = await supabase.from('seller_applications').update({
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: reviewedBy
+      }).eq('id', applicationId);
       if (appError) throw appError;
 
       const { error: profileError } = await supabase.from('seller_profiles').insert({
@@ -371,6 +408,38 @@ export default function AdminDashboard() {
     } catch (err: any) {
       console.error('Role update error:', err);
       setNotification({ type: 'error', message: err.message || 'Failed to update role' });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleProductToggle = async (productId: string, currentStatus: boolean) => {
+    if (!confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this product?`)) return;
+    setProcessing(productId);
+    try {
+      const { error } = await supabase.from('products').update({ is_active: !currentStatus }).eq('id', productId);
+      if (error) throw error;
+      setNotification({ type: 'success', message: `Product ${currentStatus ? 'deactivated' : 'activated'} successfully` });
+      fetchData();
+    } catch (error: any) {
+      console.error('Error toggling product:', error);
+      setNotification({ type: 'error', message: 'Failed to update product status' });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleProductDelete = async (productId: string) => {
+    if (!confirm('Are you sure you want to DELETE this product? This action cannot be undone.')) return;
+    setProcessing(productId);
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', productId);
+      if (error) throw error;
+      setNotification({ type: 'success', message: 'Product deleted permanently' });
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      setNotification({ type: 'error', message: 'Failed to delete product' });
     } finally {
       setProcessing(null);
     }
@@ -546,6 +615,7 @@ export default function AdminDashboard() {
           {[
             { id: 'overview', label: 'Overview', icon: 'ri-dashboard-2-line' },
             { id: 'applications', label: 'Applications', icon: 'ri-file-list-3-line', badge: pendingApps.length },
+            { id: 'products', label: 'Products', icon: 'ri-shopping-bag-3-line' },
             { id: 'analytics', label: 'Analytics', icon: 'ri-line-chart-line' },
             { id: 'activity', label: 'Activity', icon: 'ri-history-line' }
           ].map(tab => (
@@ -672,6 +742,63 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeTab === 'products' && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-black text-white mb-6">Product Management ({allProducts.length})</h3>
+              <div className="grid grid-cols-1 gap-4">
+                {allProducts.map((product) => (
+                  <div key={product.id} className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center hover:border-slate-600 transition-all">
+                    <div className="w-16 h-16 rounded-xl bg-slate-700/50 overflow-hidden flex-shrink-0">
+                      {product.images?.[0] ? (
+                        <img src={getOptimizedImageUrl(product.images[0], 100, 80)} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><i className="ri-image-line text-slate-500"></i></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 text-center md:text-left">
+                      <div className="flex items-center gap-3 justify-center md:justify-start mb-1">
+                        <h4 className="font-bold text-white truncate">{product.name}</h4>
+                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black ${product.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-500/10 text-slate-400'}`}>
+                          {product.is_active ? 'Active' : 'Hidden'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                        <span><i className="ri-store-2-line text-blue-400 mr-1"></i>{product.seller?.full_name || 'Unknown Seller'}</span>
+                        <span><i className="ri-price-tag-3-line text-emerald-400 mr-1"></i>GH₵ {product.price}</span>
+                        <span><i className="ri-eye-line text-amber-400 mr-1"></i>{product.views_count || 0} views</span>
+                        <span><i className="ri-calendar-line text-slate-400 mr-1"></i>{new Date(product.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleProductToggle(product.id, product.is_active)}
+                        disabled={!!processing}
+                        className={`px-4 py-2 rounded-xl font-bold text-xs uppercase transition-all ${product.is_active ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}
+                        title={product.is_active ? 'Deactivate Product' : 'Activate Product'}
+                      >
+                        {processing === product.id ? <i className="ri-loader-4-line animate-spin"></i> : (product.is_active ? 'Hide' : 'Show')}
+                      </button>
+                      <button
+                        onClick={() => handleProductDelete(product.id)}
+                        disabled={!!processing}
+                        className="px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-xl font-bold text-xs uppercase transition-all"
+                        title="Delete Permanently"
+                      >
+                        {processing === product.id ? <i className="ri-loader-4-line animate-spin"></i> : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {allProducts.length === 0 && (
+                  <div className="p-12 text-center text-slate-500 bg-slate-800/30 rounded-2xl border border-slate-700/30">
+                    <i className="ri-dropbox-line text-4xl mb-3 block"></i>
+                    No products found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'applications' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-6">
@@ -699,8 +826,8 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-3 justify-center xl:justify-start mb-2">
                         <h4 className="text-2xl font-black text-white truncate">{app.business_name}</h4>
                         <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase ${app.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
-                            app.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' :
-                              'bg-rose-500/20 text-rose-400'
+                          app.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' :
+                            'bg-rose-500/20 text-rose-400'
                           }`}>
                           {app.status}
                         </span>
