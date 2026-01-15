@@ -118,8 +118,8 @@ export default function NewsPublisherDashboard() {
             {/* Notification Toast */}
             {notification && (
                 <div className={`fixed top-24 right-4 md:right-8 z-50 animate-in fade-in slide-in-from-right-8 duration-300 px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md ${notification.type === 'success' ? 'bg-emerald-500/90 border-emerald-400/50 text-white' :
-                        notification.type === 'error' ? 'bg-rose-500/90 border-rose-400/50 text-white' :
-                            'bg-blue-500/90 border-blue-400/50 text-white'
+                    notification.type === 'error' ? 'bg-rose-500/90 border-rose-400/50 text-white' :
+                        'bg-blue-500/90 border-blue-400/50 text-white'
                     }`}>
                     <i className={`${notification.type === 'success' ? 'ri-checkbox-circle-fill' : notification.type === 'error' ? 'ri-error-warning-fill' : 'ri-notification-3-fill'} text-xl`}></i>
                     <span className="font-bold text-sm tracking-wide">{notification.message}</span>
@@ -127,39 +127,33 @@ export default function NewsPublisherDashboard() {
             )}
 
             <div className="pt-32 md:pt-40 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-16">
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-600 dark:bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg shadow-indigo-500/30">
-                                <i className="ri-article-line"></i>
-                                Publisher Portal 2.0
-                            </div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-xl shadow-indigo-500/20">
+                                <i className="ri-quill-pen-line mr-2"></i>
+                                Editorial HQ
+                            </span>
+                            <span className="px-4 py-1.5 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-slate-100 dark:border-slate-700">
+                                V2.4.0
+                            </span>
                         </div>
-                        <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
-                            Newsroom<span className="text-indigo-600 dark:text-indigo-400">.</span>
+                        <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-6">
+                            Campus<br /><span className="text-indigo-600">Newsroom.</span>
                         </h1>
-                        <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">
-                            Create, manage, and distribute campus stories.
+                        <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+                            <span className="w-8 h-[2px] bg-indigo-600/30"></span>
+                            Authoring & Media distribution center
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        {isAdmin && (
-                            <button
-                                onClick={() => navigate('/admin/dashboard')}
-                                className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 text-xs uppercase tracking-wide flex items-center justify-center gap-2"
-                            >
-                                <i className="ri-arrow-left-line text-lg"></i>
-                                Admin Dash
-                            </button>
-                        )}
+                    <div className="flex items-center gap-3">
                         <Link
                             to="/admin/news"
-                            className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all active:scale-95 text-xs uppercase tracking-wide shadow-lg shadow-indigo-200/50 dark:shadow-none flex items-center justify-center gap-2"
+                            className="h-16 px-8 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl hover:scale-105 transition-all text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95"
                         >
-                            <i className="ri-add-line text-lg"></i>
-                            Compose Story
+                            <i className="ri-add-line text-xl"></i>
+                            New Dispatch
                         </Link>
                     </div>
                 </div>

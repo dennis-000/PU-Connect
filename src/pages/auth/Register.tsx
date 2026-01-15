@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { sendSMS } from '../../lib/arkesel';
 
 export default function Register() {
@@ -87,28 +88,41 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // 1. Create Account (and sending Welcome SMS)
-      await signUp(
-        formData.email,
-        formData.password,
-        formData.fullName,
-        '', // studentId (removed as requested)
-        formData.department,
-        formData.faculty,
-        formData.phone
-      );
+      // 1. Create Account via Edge Function (Auto-confirms email)
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl('placeholder'); // Just to get project URL
+      const projectURL = publicUrl.split('/storage')[0];
+      const functionURL = `${projectURL}/functions/v1/register-user`;
 
-      // 2. Explicitly sign in to ensure session is active
-      // This solves the issue where users weren't being auto-logged in
+      const response = await fetch(functionURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName,
+          department: formData.department,
+          faculty: formData.faculty,
+          phone: formData.phone
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create account');
+      }
+
+      // 2. Sign in the user since they are now confirmed
       try {
         await signIn(formData.email, formData.password);
         navigate('/marketplace');
-      } catch (loginErr) {
+      } catch (loginErr: any) {
         console.warn('Auto-login failed after registration:', loginErr);
-        // If login fails (likely due to email confirmation being enabled),
-        // we redirect to login page with a message
         navigate('/login');
-        alert('Account created! Please sign in. You may need to verify your email first.');
+        alert('Account created! Please sign in with your credentials.');
       }
 
     } catch (err: any) {

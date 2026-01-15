@@ -127,14 +127,58 @@ alter table product_reviews
   references profiles(id)
   on delete cascade;
 
+-- 11. Activity Logs
+alter table activity_logs
+  drop constraint if exists activity_logs_user_id_fkey;
+
+alter table activity_logs
+  add constraint activity_logs_user_id_fkey
+  foreign key (user_id)
+  references profiles(id)
+  on delete cascade;
+
+-- 12. Seller Profiles
+alter table seller_profiles
+  drop constraint if exists seller_profiles_user_id_fkey;
+
+alter table seller_profiles
+  add constraint seller_profiles_user_id_fkey
+  foreign key (user_id)
+  references profiles(id)
+  on delete cascade;
+
+-- 13. Advertisements
+alter table advertisements
+  drop constraint if exists advertisements_created_by_fkey;
+
+alter table advertisements
+  add constraint advertisements_created_by_fkey
+  foreign key (created_by)
+  references profiles(id)
+  on delete cascade;
+
+-- 14. Scheduled SMS
+alter table scheduled_sms
+  drop constraint if exists scheduled_sms_created_by_fkey;
+
+alter table scheduled_sms
+  add constraint scheduled_sms_created_by_fkey
+  foreign key (created_by)
+  references profiles(id)
+  on delete cascade;
+
 -- Helper to safely delete a user via SQL (if admin needs to force it)
 create or replace function delete_user_by_email(user_email text)
 returns void as $$
 declare
   uid uuid;
+  uid_text text;
 begin
   select id into uid from auth.users where email = user_email;
+  uid_text := uid::text;
   if uid is not null then
+    -- Manually clear some text-based tables if constraints are stubborn
+    delete from activity_logs where user_id = uid_text;
     delete from auth.users where id = uid; -- Cascades to profiles -> Cascades to everything else
   end if;
 end;

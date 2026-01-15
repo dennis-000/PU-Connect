@@ -54,12 +54,23 @@ export default function SMSManagement() {
   const [filterFaculty, setFilterFaculty] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'compose' | 'scheduled' | 'history'>('compose');
+  const [activeTab, setActiveTab] = useState<'compose' | 'scheduled' | 'history' | 'topups'>('compose');
   const [scheduledSMS, setScheduledSMS] = useState<ScheduledSMS[]>([]);
   const [smsHistory, setSmsHistory] = useState<SMSHistoryItem[]>([]);
   const [scheduledAt, setScheduledAt] = useState('');
 
   const [smsBalance, setSmsBalance] = useState(0);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [buyingUnits, setBuyingUnits] = useState(false);
+  const [topupHistory, setTopupHistory] = useState<any[]>([]);
+
+  const SMS_PACKAGES = [
+    { units: 500, price: 15, label: 'Sprint', icon: 'ri-flashlight-line', type: 'no-expiry' },
+    { units: 1500, price: 40, label: 'Velocity', icon: 'ri-rocket-line', type: 'no-expiry' },
+    { units: 3500, price: 90, label: 'Altitude', icon: 'ri-medal-line', type: 'no-expiry' },
+    { units: 10000, price: 250, label: 'Orbital', icon: 'ri-crown-line', type: 'no-expiry' },
+    { units: 20000, price: 450, label: 'Galactic', icon: 'ri-rocket-2-fill', type: 'monthly' }
+  ];
 
   useEffect(() => {
     if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
@@ -70,11 +81,14 @@ export default function SMSManagement() {
     fetchScheduledSMS();
     fetchHistory();
     fetchBalance();
+    fetchTopupHistory();
   }, [profile, navigate]);
 
   const fetchBalance = async () => {
     try {
+      // Import once at the top to make it faster
       const { getSMSBalance } = await import('../../lib/arkesel');
+      // Parallelize nothing, just fetch. Arkesel is fast, the import/init is the slow part.
       const balance = await getSMSBalance();
       setSmsBalance(balance);
     } catch (err) {
@@ -128,6 +142,20 @@ export default function SMSManagement() {
       setSmsHistory(data as any || []);
     } catch (error) {
       console.error('Error fetching SMS history:', error);
+    }
+  };
+
+  const fetchTopupHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sms_topups')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTopupHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching topup history:', error);
     }
   };
 
@@ -239,6 +267,34 @@ export default function SMSManagement() {
     }
   };
 
+  const handlePurchaseSMS = async (pkg: typeof SMS_PACKAGES[0]) => {
+    setBuyingUnits(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
+        body: {
+          email: profile?.email,
+          amount: pkg.price,
+          metadata: {
+            type: 'sms_topup',
+            units: pkg.units,
+            admin_id: profile?.id
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.authorization_url) {
+        window.location.href = data.authorization_url;
+      }
+    } catch (err: any) {
+      console.error('Purchase initialization failed:', err);
+      alert(err.message || 'Failed to initialize payment');
+    } finally {
+      setBuyingUnits(false);
+    }
+  };
+
   // Unique faculties for filter
   const faculties = Array.from(new Set(users.map(u => u.faculty).filter(Boolean)));
 
@@ -269,20 +325,31 @@ export default function SMSManagement() {
             <p className="text-slate-500 font-medium">Broadcast System & Engagement</p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 px-5 py-3 rounded-2xl shadow-lg shadow-orange-500/20 flex items-center gap-4 text-white hover:scale-105 transition-transform">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <i className="ri-coins-line text-xl"></i>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Improved Balance Card */}
+            <div className="bg-white dark:bg-slate-800 px-6 py-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center text-xl">
+                <i className="ri-coins-line"></i>
               </div>
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-white/80">SMS Balance</div>
-                <div className="text-xl font-black">{smsBalance.toLocaleString()} <span className="text-xs font-bold text-white/60">UNITS</span></div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">SMS Balance</div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                  {smsBalance.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-1">UNITS</span>
+                </div>
               </div>
             </div>
 
             <button
+              onClick={() => setShowBuyModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-3xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/25 active:scale-95 flex items-center gap-3"
+            >
+              <i className="ri-add-circle-line text-lg"></i>
+              Top Up Credits
+            </button>
+
+            <button
               onClick={() => navigate('/admin/dashboard')}
-              className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center"
               title="Back to Dashboard"
             >
               <i className="ri-arrow-left-line text-xl"></i>
@@ -295,7 +362,8 @@ export default function SMSManagement() {
           {[
             { id: 'compose', label: 'Compose', icon: 'ri-edit-box-line' },
             { id: 'scheduled', label: `Scheduled (${scheduledSMS.length})`, icon: 'ri-calendar-event-line' },
-            { id: 'history', label: 'Sent History', icon: 'ri-history-line' }
+            { id: 'history', label: 'Sent History', icon: 'ri-history-line' },
+            { id: 'topups', label: 'Topup History', icon: 'ri-bank-card-line' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -384,8 +452,8 @@ export default function SMSManagement() {
                         <label
                           key={user.id}
                           className={`flex items-center space-x-4 p-3 rounded-xl cursor-pointer transition-all ${selectedUsers.includes(user.id)
-                              ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30'
-                              : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 border border-transparent'
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 border border-transparent'
                             }`}
                         >
                           <input
@@ -573,6 +641,61 @@ export default function SMSManagement() {
               </div>
             )}
           </div>
+        ) : activeTab === 'topups' ? (
+          // TOPUP HISTORY TAB
+          <div className="space-y-6">
+            {topupHistory.length === 0 ? (
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-12 text-center">
+                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <i className="ri-bank-card-line text-4xl text-slate-300 dark:text-slate-500"></i>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No Purchase History</h3>
+                <p className="text-slate-500 font-medium max-w-sm mx-auto">SMS credit purchases will be tracked here for your reference.</p>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 dark:border-slate-700 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        <th className="p-6">Date</th>
+                        <th className="p-6">Package</th>
+                        <th className="p-6">Amount</th>
+                        <th className="p-6">Reference</th>
+                        <th className="p-6">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topupHistory.map((topup) => (
+                        <tr key={topup.id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                          <td className="p-6 text-sm font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                            {new Date(topup.created_at).toLocaleString()}
+                          </td>
+                          <td className="p-6 text-sm font-black text-slate-900 dark:text-white">
+                            {topup.units.toLocaleString()} UNITS
+                          </td>
+                          <td className="p-6 text-sm font-bold text-emerald-600">
+                            GH₵ {topup.amount.toFixed(2)}
+                          </td>
+                          <td className="p-6 text-xs font-mono text-slate-400">
+                            {topup.payment_reference}
+                          </td>
+                          <td className="p-6">
+                            <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md ${topup.status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                              topup.status === 'failed' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                                'bg-amber-50 text-amber-700 border border-amber-100'
+                              }`}>
+                              {topup.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           // HISTORY TAB
           <div className="space-y-6">
@@ -625,6 +748,69 @@ export default function SMSManagement() {
           </div>
         )}
       </div>
+
+      {/* Purchase Modal */}
+      {showBuyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 animate-in zoom-in-95">
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Purchase SMS Units</h3>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Top up your broadcast balance</p>
+              </div>
+              <button
+                onClick={() => setShowBuyModal(false)}
+                className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <div className="p-8">
+              <div className="flex items-center justify-center gap-2 mb-8">
+                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Rates synced with Arkesel Official
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {SMS_PACKAGES.map((pkg, i) => (
+                  <button
+                    key={i}
+                    disabled={buyingUnits}
+                    onClick={() => handlePurchaseSMS(pkg)}
+                    className="group flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl border-2 border-slate-50 dark:border-slate-800 hover:border-indigo-500 hover:bg-indigo-50/10 transition-all text-center relative overflow-hidden active:scale-95 cursor-pointer shadow-sm hover:shadow-indigo-500/10"
+                  >
+                    <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-500/5 rounded-bl-full group-hover:scale-110 transition-transform"></div>
+
+                    {/* Expiry Tag */}
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-slate-900/5 dark:bg-white/5 rounded-md text-[8px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      {pkg.type === 'no-expiry' ? 'No Expiry' : '30 Days'}
+                    </div>
+
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center mb-3 text-lg sm:text-xl ring-4 ring-indigo-50 dark:ring-indigo-900/20">
+                      <i className={pkg.icon}></i>
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-1 leading-none">{pkg.units.toLocaleString()}</div>
+                    <div className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">{pkg.label}</div>
+                    <div className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] sm:text-sm font-black tracking-tight group-hover:scale-110 transition-transform shadow-lg shadow-indigo-600/20">
+                      GH₵ {pkg.price}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-8 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                <i className="ri-information-line text-blue-600 text-lg"></i>
+                <p className="text-xs text-blue-800 dark:text-blue-300 font-medium leading-relaxed">
+                  Payments are securely processed via <span className="font-black text-indigo-600 dark:text-indigo-400">Paystack</span>. Units will be added to your account record automatically upon successful verification.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -108,9 +108,9 @@ function Marketplace() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-white">Live Market</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-8xl font-bold text-white mb-6 md:mb-8 tracking-tight leading-none animate-fade-in-up delay-100 drop-shadow-2xl">
+          <h1 className="text-5xl sm:text-6xl md:text-8xl font-black text-white mb-8 md:mb-12 tracking-tighter leading-[0.85] animate-fade-in-up delay-100 drop-shadow-2xl">
             Campus <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Commerce.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Market.</span>
           </h1>
 
           {/* Search Bar - Glassmorphism */}
@@ -141,17 +141,17 @@ function Marketplace() {
 
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20">
         {/* Category Pills - Floating Scroll */}
-        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-6 md:pb-8 pt-4 no-scrollbar mask-gradient px-4 justify-start md:justify-center snap-x">
+        <div className="flex gap-4 overflow-x-auto pb-8 md:pb-12 pt-4 no-scrollbar mask-gradient px-4 justify-start md:justify-center snap-x">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => handleCategorySelect(category.id)}
-              className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all duration-300 font-bold text-xs uppercase tracking-wide shadow-lg whitespace-nowrap group ${selectedCategory === category.id
-                ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/30 scale-105'
-                : 'bg-white dark:bg-gray-800 border-white dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600'
+              className={`flex items-center gap-3 px-8 py-5 rounded-[2rem] border transition-all duration-500 font-bold text-xs uppercase tracking-widest shadow-2xl whitespace-nowrap group snap-center ${selectedCategory === category.id
+                ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/40 scale-105'
+                : 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-white/20 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:scale-105'
                 }`}
             >
-              <i className={`${category.icon} text-lg ${selectedCategory === category.id ? 'text-white' : 'text-gray-400 group-hover:text-blue-500'}`}></i>
+              <i className={`${category.icon} text-xl ${selectedCategory === category.id ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`}></i>
               {category.name}
             </button>
           ))}
@@ -192,7 +192,7 @@ function Marketplace() {
 
           {/* Product Grid */}
           {productsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                 <div key={i} className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 h-[450px] animate-pulse border border-gray-100 dark:border-gray-800">
                   <div className="bg-gray-100 dark:bg-gray-800 h-64 rounded-[1.5rem] mb-4"></div>
@@ -202,17 +202,17 @@ function Marketplace() {
               ))}
             </div>
           ) : filteredAndSortedProducts?.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {filteredAndSortedProducts.map((product) => {
                 const seller = product.seller as Profile;
                 return (
                   <div
                     key={product.id}
                     onClick={() => navigate(`/product/${product.id}`)}
-                    className="group relative bg-white dark:bg-gray-900 rounded-[2rem] p-3 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 cursor-pointer hover:-translate-y-2 dark:hover:bg-gray-800/50"
+                    className="group relative bg-white dark:bg-gray-900 rounded-[1.5rem] sm:rounded-[2rem] p-2 sm:p-3 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 cursor-pointer hover:-translate-y-2 dark:hover:bg-gray-800/50"
                   >
                     {/* Image Container */}
-                    <div className="relative aspect-[4/5] rounded-[1.5rem] overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4 ">
+                    <div className="relative aspect-[4/5] rounded-[1rem] sm:rounded-[1.5rem] overflow-hidden bg-gray-100 dark:bg-gray-800 mb-3 sm:mb-4 ">
                       {product.images?.[0] ? (
                         <img
                           src={getOptimizedImageUrl(product.images[0], 600, 85)}
@@ -228,18 +228,18 @@ function Marketplace() {
                       {/* Overlay Gradient on Hover */}
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                      <div className="absolute top-4 right-4 z-10">
+                      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavoriteMutation.mutate(product.id);
                           }}
-                          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 backdrop-blur-md ${favorites.includes(product.id)
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 backdrop-blur-md ${favorites.includes(product.id)
                             ? 'bg-rose-500 text-white'
                             : 'bg-white/80 dark:bg-black/50 text-gray-600 dark:text-white hover:bg-rose-500 hover:text-white'
                             }`}
                         >
-                          <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
+                          <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-base sm:text-xl`}></i>
                         </button>
                       </div>
 
@@ -262,14 +262,14 @@ function Marketplace() {
                         </div>
                       </div>
 
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-1 group-hover:text-blue-600 transition-colors">
                         {product.name}
                       </h3>
 
                       <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Price</span>
-                          <span className="text-xl font-bold text-gray-900 dark:text-white">
+                          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Price</span>
+                          <span className="text-sm sm:text-xl font-black text-gray-900 dark:text-white leading-none">
                             {product.price_type === 'fixed' ? `₵${product.price?.toLocaleString()}` : 'Contact'}
                           </span>
                         </div>

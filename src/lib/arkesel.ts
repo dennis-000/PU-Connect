@@ -1,10 +1,11 @@
+const API_KEY = import.meta.env.VITE_ARKESEL_API_KEY || 'RHNPVVNWaU5uYW1hcllVVXJvZlY';
+
 export const sendSMS = async (recipients: string[], message: string) => {
-    const apiKey = 'RHNPVVNWaU5uYW1hcllVVXJvZlY';
     try {
         const response = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
             method: 'POST',
             headers: {
-                'api-key': apiKey,
+                'api-key': API_KEY,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -22,23 +23,36 @@ export const sendSMS = async (recipients: string[], message: string) => {
 };
 
 export const getSMSBalance = async () => {
-    const apiKey = 'RHNPVVNWaU5uYW1hcllVVXJvZlY';
     try {
-        const response = await fetch('https://sms.arkesel.com/api/v2/clients/balance', {
+        // Updated to the correct V2 balance-details endpoint
+        const response = await fetch('https://sms.arkesel.com/api/v2/clients/balance-details', {
             method: 'GET',
             headers: {
-                'api-key': apiKey,
+                'api-key': API_KEY,
             },
         });
-        const result = await response.json();
-        // Result format check (adapting to generic response structure)
-        if (result.data) {
-            // Return sms_unit if available, otherwise just return the numeric part of balance if it's a number
-            return result.data.sms_unit !== undefined ? Number(result.data.sms_unit) : 0;
+
+        if (!response.ok) {
+            console.error('Arkesel API Check Failed:', response.statusText);
+            return 0;
         }
+
+        const result = await response.json();
+        console.log('Arkesel Balance Response:', result);
+
+        // V2 Response Structure: { status: "success", data: { sms_balance: "2000", ... } }
+        if (result.data) {
+            if (result.data.sms_balance !== undefined) return Number(result.data.sms_balance);
+            if (result.data.sms_unit !== undefined) return Number(result.data.sms_unit);
+            if (result.data.balance !== undefined) return Number(result.data.balance);
+        }
+
+        // V1 Fallback: { balance: 100, ... }
+        if (result.balance !== undefined) return Number(result.balance);
+
         return 0;
     } catch (error) {
-        console.error('Arkesel Balance Error:', error);
+        console.error('Arkesel Balance Network Error:', error);
         return 0;
     }
 };

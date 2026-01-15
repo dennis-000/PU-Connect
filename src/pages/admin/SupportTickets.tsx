@@ -71,6 +71,17 @@ export default function SupportTickets() {
         }
     };
 
+    const deleteTicket = async (id: string) => {
+        if (!confirm('Permanently delete this ticket?')) return;
+        try {
+            const { error } = await supabase.from('support_tickets').delete().eq('id', id);
+            if (error) throw error;
+            fetchTickets();
+        } catch (err) {
+            console.error('Error deleting ticket', err);
+        }
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300 pb-20 font-sans">
             <Navbar />
@@ -105,8 +116,8 @@ export default function SupportTickets() {
                             key={f}
                             onClick={() => setFilter(f as any)}
                             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${filter === f
-                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                    : 'bg-white text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400'
+                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                                : 'bg-white text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400'
                                 }`}
                         >
                             {f}
@@ -134,8 +145,8 @@ export default function SupportTickets() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
                                             <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest ${ticket.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                                                    ticket.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                                        'bg-blue-100 text-blue-700'
+                                                ticket.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                                    'bg-blue-100 text-blue-700'
                                                 }`}>
                                                 {ticket.priority}
                                             </span>
@@ -182,10 +193,17 @@ export default function SupportTickets() {
                                                 Process
                                             </button>
                                         )}
+                                        <button
+                                            onClick={() => deleteTicket(ticket.id)}
+                                            className="px-4 py-2 opacity-40 hover:opacity-100 text-rose-600 rounded-xl text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <i className="ri-delete-bin-line text-lg"></i>
+                                            Delete
+                                        </button>
                                         <div className="mt-auto pt-2 text-center">
                                             <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${ticket.status === 'resolved' ? 'bg-gray-100 text-gray-500' :
-                                                    ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
-                                                        'bg-purple-100 text-purple-600'
+                                                ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
+                                                    'bg-purple-100 text-purple-600'
                                                 }`}>
                                                 {ticket.status.replace('_', ' ')}
                                             </span>

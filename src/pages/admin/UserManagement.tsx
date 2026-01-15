@@ -28,6 +28,18 @@ export default function UserManagement() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  // Add User State
+  const [newData, setNewData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    department: '',
+    faculty: '',
+    phone: '',
+    role: 'buyer'
+  });
 
   // Expanded Edit Data State
   const [editData, setEditData] = useState({
@@ -90,6 +102,9 @@ export default function UserManagement() {
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
     // Optimistic Update
     setUsers(users.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u));
+    if (selectedUser?.id === userId) {
+      setSelectedUser(prev => prev ? { ...prev, is_active: !currentStatus } : null);
+    }
 
     try {
       const { error } = await supabase
@@ -113,7 +128,12 @@ export default function UserManagement() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (userId === profile?.id) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+
+    if (!confirm('Are you sure you want to PERMANENTLY delete this user? This will remove their profile AND their authentication account, allowing them to sign up again if needed. This action cannot be undone.')) {
       return;
     }
 
@@ -121,22 +141,75 @@ export default function UserManagement() {
     setUsers(users.filter(u => u.id !== userId));
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
+      // Call the Edge Function to delete from both Auth and Profiles
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
 
-      if (error) {
+      if (error || !data?.success) {
         setUsers(previousUsers);
-        throw error;
+        throw error || new Error(data?.error || 'Failed to delete user');
       }
 
       setOpenDropdown(null);
-      alert('User deleted successfully');
+      alert('User account and profile permanently deleted');
       fetchUsers();
     } catch (error: any) {
       console.error('Error deleting user:', error);
       alert(`Failed to delete user: ${error.message}`);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      // Create Account via Edge Function (Auto-confirms email)
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl('placeholder');
+      const projectURL = publicUrl.split('/storage')[0];
+      const functionURL = `${projectURL}/functions/v1/register-user`;
+
+      const response = await fetch(functionURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(newData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create account');
+      }
+
+      // If specialty role was selected, update it (register-user defaults to buyer)
+      if (newData.role !== 'buyer') {
+        const { error: roleError } = await supabase
+          .from('profiles')
+          .update({ role: newData.role })
+          .eq('id', result.userId);
+        if (roleError) console.error('Failed to update role:', roleError);
+      }
+
+      alert('User created successfully and auto-confirmed!');
+      setShowAddModal(false);
+      setNewData({
+        email: '',
+        password: '',
+        fullName: '',
+        department: '',
+        faculty: '',
+        phone: '',
+        role: 'buyer'
+      });
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to create user');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -293,10 +366,17 @@ export default function UserManagement() {
               <i className="ri-arrow-left-line mr-2"></i>
               Dashboard
             </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold uppercase tracking-wide hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
+            >
+              <i className="ri-user-add-line text-lg"></i>
+              Add User
+            </button>
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-black dark:hover:bg-slate-100 transition-colors shadow-lg cursor-pointer flex items-center gap-2"
+                className="px-5 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm cursor-pointer flex items-center gap-2"
               >
                 <i className="ri-download-line text-lg"></i>
                 Export
@@ -538,6 +618,43 @@ export default function UserManagement() {
                   ))}
                 </div>
               </div>
+
+              {/* Account Management Actions */}
+              <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                  <i className="ri-shield-flash-line text-rose-500"></i>
+                  Account Management
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => handleToggleActive(selectedUser.id, selectedUser.is_active)}
+                    className={`flex items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all font-bold text-xs uppercase tracking-widest active:scale-95 ${selectedUser.is_active
+                      ? 'border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/10 dark:border-amber-900/20'
+                      : 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/20'
+                      }`}
+                  >
+                    <i className={selectedUser.is_active ? 'ri-user-forbid-line text-lg' : 'ri-user-follow-line text-lg'}></i>
+                    {selectedUser.is_active ? 'Suspend Account' : 'Activate Account'}
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      await handleDeleteUser(selectedUser.id);
+                      setShowEditModal(false);
+                    }}
+                    className="flex items-center justify-center gap-3 p-5 rounded-2xl border-2 border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-900/10 dark:border-rose-900/20 transition-all font-bold text-xs uppercase tracking-widest active:scale-95"
+                  >
+                    <i className="ri-delete-bin-line text-lg"></i>
+                    Delete Profile
+                  </button>
+                </div>
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed px-1">
+                  <i className="ri-information-line mr-1 text-blue-500"></i>
+                  Suspending blocks access while keeping data. Deleting permanently removes the profile.
+                </p>
+              </div>
             </div>
 
             {/* Modal Footer */}
@@ -558,6 +675,132 @@ export default function UserManagement() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto outline-none border border-slate-100 dark:border-slate-800 flex flex-col">
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur z-10">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Create User</h3>
+                <p className="text-sm text-slate-500 font-medium">Add a new user to the platform (Auto-confirm email)</p>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2 block">Full Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={newData.fullName}
+                    onChange={e => setNewData({ ...newData, fullName: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500/50 outline-none font-medium"
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2 block">Email Address</label>
+                  <input
+                    required
+                    type="email"
+                    value={newData.email}
+                    onChange={e => setNewData({ ...newData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500/50 outline-none font-medium"
+                    placeholder="user@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2 block">Password</label>
+                  <input
+                    required
+                    type="password"
+                    value={newData.password}
+                    onChange={e => setNewData({ ...newData, password: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500/50 outline-none font-medium"
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2 block">Phone Number</label>
+                  <input
+                    required
+                    type="tel"
+                    value={newData.phone}
+                    onChange={e => setNewData({ ...newData, phone: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500/50 outline-none font-medium"
+                    placeholder="024XXXXXXX"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2 block">Faculty</label>
+                  <select
+                    required
+                    value={newData.faculty}
+                    onChange={e => setNewData({ ...newData, faculty: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500/50 outline-none font-medium"
+                  >
+                    <option value="">Select Faculty</option>
+                    <option value="Faculty of Business">Faculty of Business</option>
+                    <option value="Faculty of Science & Computing">Faculty of Science & Computing</option>
+                    <option value="Faculty of Nursing & Midwifery">Faculty of Nursing & Midwifery</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2 block">Department</label>
+                  <input
+                    type="text"
+                    value={newData.department}
+                    onChange={e => setNewData({ ...newData, department: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none focus:ring-2 focus:ring-blue-500/50 outline-none font-medium"
+                    placeholder="e.g. IT"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-4 block">Initial Role</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {['buyer', 'seller', 'admin', 'news_publisher'].map(role => (
+                    <div
+                      key={role}
+                      onClick={() => setNewData({ ...newData, role })}
+                      className={`cursor-pointer px-4 py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 text-center ${newData.role === role ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800'}`}
+                    >
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 capitalize">{role.replace('_', ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 transition-colors uppercase tracking-widest text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                >
+                  {saving ? <i className="ri-loader-4-line animate-spin text-lg"></i> : <i className="ri-user-add-line text-lg"></i>}
+                  Create User Account
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
