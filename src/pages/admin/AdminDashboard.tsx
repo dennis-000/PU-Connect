@@ -133,7 +133,7 @@ export default function AdminDashboard() {
       const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes] = await Promise.all([
         supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(100),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'seller'),
+        supabase.from('seller_profiles').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).in('role', ['admin', 'super_admin']),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'news_publisher'),
         supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('category', 'product'),

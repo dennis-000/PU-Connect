@@ -179,13 +179,23 @@ export default function Navbar() {
                 Help Center
               </Link>
               <div className="w-px h-6 bg-gray-200 dark:bg-gray-800 mx-2"></div>
-              <Link
-                to="/seller/apply"
-                className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-95 transition-all flex items-center gap-2"
-              >
-                <i className="ri-store-2-line text-lg"></i>
-                Become a Seller
-              </Link>
+              {profile?.role === 'seller' || profile?.role === 'admin' || profile?.role === 'super_admin' ? (
+                <Link
+                  to="/seller/dashboard"
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <i className="ri-dashboard-line text-lg"></i>
+                  Seller Dashboard
+                </Link>
+              ) : (
+                <Link
+                  to="/seller/apply"
+                  className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <i className="ri-store-2-line text-lg"></i>
+                  Become a Seller
+                </Link>
+              )}
             </div>
 
             {/* Auth/User Section */}
