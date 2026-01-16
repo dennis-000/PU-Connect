@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -110,13 +109,10 @@ export default function ApplicationStatus() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-        <Navbar />
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading your application...</p>
-          </div>
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center transition-colors duration-500">
+        <div className="text-center">
+          <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-slate-500 dark:text-slate-400 font-black text-xs uppercase tracking-[0.2em] animate-pulse">Initializing Security Clearance...</p>
         </div>
       </div>
     );
@@ -124,18 +120,19 @@ export default function ApplicationStatus() {
 
   if (!application) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-500">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-          <div className="bg-white rounded-2xl p-12 shadow-sm border border-gray-100">
-            <i className="ri-file-search-line text-6xl text-gray-400 mb-4"></i>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Application Found</h2>
-            <p className="text-gray-600 mb-6">You haven't submitted a seller application yet.</p>
+        <div className="max-w-4xl mx-auto px-4 py-20 md:py-32 text-center">
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-16 md:p-24 border border-slate-100 dark:border-slate-800 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
+            <i className="ri-file-search-fill text-8xl text-slate-200 dark:text-slate-800 mb-8 block transition-transform group-hover:scale-110 duration-700"></i>
+            <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6 tracking-tighter">No Active Records.</h2>
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-lg mb-12 max-w-md mx-auto">We couldn't find an existing merchant application associated with your identity.</p>
             <button
               onClick={() => navigate('/seller/apply')}
-              className="px-8 py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all font-medium whitespace-nowrap cursor-pointer shadow-md"
+              className="h-16 px-12 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-[0.3em] rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-blue-500/20"
             >
-              Apply Now
+              Begin Onboarding
             </button>
           </div>
         </div>
@@ -143,25 +140,14 @@ export default function ApplicationStatus() {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-gradient-to-br from-green-50 to-green-100 border-green-200';
-      case 'rejected':
-        return 'bg-gradient-to-br from-red-50 to-red-100 border-red-200';
-      default:
-        return 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200';
-    }
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'ri-checkbox-circle-line';
+        return 'ri-shield-check-fill';
       case 'rejected':
-        return 'ri-close-circle-line';
+        return 'ri-error-warning-fill';
       default:
-        return 'ri-time-line';
+        return 'ri-time-fill';
     }
   };
 
@@ -170,20 +156,26 @@ export default function ApplicationStatus() {
       case 'pending':
         return {
           title: 'Under Review',
-          message: 'Your application is being reviewed by our admin team. We\'ll notify you once a decision is made.',
-          icon: 'ri-hourglass-line',
+          message: 'Your application is being audited by our trust and safety team. We\'ll notify you once a decision is finalized.',
+          icon: 'ri-hourglass-2-fill',
         };
       case 'approved':
         return {
-          title: 'Congratulations!',
-          message: 'Your application has been approved! You can now start selling your products on our platform.',
-          icon: 'ri-trophy-line',
+          title: 'Verification Complete!',
+          message: 'Your credentials have been validated. You now have full access to our merchant infrastructure.',
+          icon: 'ri-verified-badge-fill',
         };
       case 'rejected':
         return {
-          title: 'Application Not Approved',
-          message: 'Unfortunately, your application was not approved at this time. Please review the reason below.',
-          icon: 'ri-error-warning-line',
+          title: 'Action Required',
+          message: 'Unfortunately, your application did not meet our verification criteria. Please review the feedback below.',
+          icon: 'ri-close-circle-fill',
+        };
+      default:
+        return {
+          title: 'Unknown Status',
+          message: 'Checking records...',
+          icon: 'ri-question-fill',
         };
     }
   };
@@ -191,61 +183,74 @@ export default function ApplicationStatus() {
   const statusInfo = getStatusMessage(application.status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-500">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-          <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-900 text-white text-[10px] font-bold uppercase tracking-wide rounded-full mb-6">
-              <i className="ri-radar-line text-blue-400"></i>
-              Application Review
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20 lg:py-28 relative">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-40 right-0 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
+        <div className="absolute bottom-20 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl -z-10"></div>
+
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16 md:mb-24">
+          <div className="text-center md:text-left max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-white dark:to-slate-100 text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] rounded-full mb-8 shadow-xl shadow-blue-500/10">
+              <i className="ri-shield-check-fill text-blue-400 dark:text-blue-600"></i>
+              Application Tracking
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 tracking-tight leading-tight mb-4">Registry<br /><span className="text-blue-600">Status.</span></h1>
-            <p className="text-gray-500 font-bold uppercase tracking-wide text-[10px] md:text-xs">Official verification process status</p>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter leading-[0.85] mb-8">
+              Verification<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600">Registry.</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-xs flex items-center justify-center md:justify-start gap-3">
+              <span className="w-8 h-[2px] bg-blue-600/30"></span>
+              Live status of your merchant credentials
+            </p>
           </div>
+
           <button
             onClick={() => navigate('/')}
-            className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-2 group"
+            className="hidden md:flex h-14 px-8 items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer group shadow-sm active:scale-95"
           >
-            <i className="ri-home-4-line text-lg"></i>
-            Back to Home
+            <i className="ri-home-5-line text-lg mr-3 group-hover:-translate-y-1 transition-transform"></i>
+            Platform Home
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Status Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
+          {/* Status Overview Card */}
           <div className="lg:col-span-5">
-            <div className={`p-10 rounded-[2.5rem] border shadow-xl transition-all ${application.status === 'approved' ? 'bg-emerald-50 border-emerald-100 shadow-emerald-500/5' :
-              application.status === 'rejected' ? 'bg-rose-50 border-rose-100 shadow-rose-500/5' :
-                'bg-blue-50 border-blue-100 shadow-blue-500/5'
+            <div className={`p-10 md:p-14 rounded-[3rem] border shadow-2xl transition-all relative overflow-hidden group ${application.status === 'approved' ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20 shadow-emerald-500/10' :
+                application.status === 'rejected' ? 'bg-rose-50/50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20 shadow-rose-500/10' :
+                  'bg-blue-50/50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/20 shadow-blue-500/10'
               }`}>
-              <div className="flex flex-col items-center text-center">
-                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-8 shadow-lg transition-transform hover:scale-105 ${application.status === 'approved' ? 'bg-emerald-600 text-white' :
-                  application.status === 'rejected' ? 'bg-rose-600 text-white' :
-                    'bg-blue-600 text-white'
+              <div className="absolute top-0 right-0 w-40 h-40 bg-current opacity-[0.03] rounded-bl-full translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700"></div>
+
+              <div className="flex flex-col items-center text-center relative z-10">
+                <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-10 shadow-2xl shadow-current/20 transition-transform group-hover:scale-105 duration-500 ${application.status === 'approved' ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white' :
+                    application.status === 'rejected' ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white' :
+                      'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
                   }`}>
-                  <i className={`${getStatusIcon(application.status)} text-4xl`}></i>
+                  <i className={`${getStatusIcon(application.status)} text-5xl`}></i>
                 </div>
 
-                <h2 className={`text-2xl font-bold tracking-tight mb-4 ${application.status === 'approved' ? 'text-emerald-900' :
-                  application.status === 'rejected' ? 'text-rose-900' :
-                    'text-blue-900'
+                <h2 className={`text-3xl font-black tracking-tight mb-4 ${application.status === 'approved' ? 'text-emerald-900 dark:text-emerald-400' :
+                    application.status === 'rejected' ? 'text-rose-900 dark:text-rose-400' :
+                      'text-blue-900 dark:text-blue-400'
                   }`}>
                   {statusInfo.title}
                 </h2>
 
-                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide mb-8 border ${application.status === 'approved' ? 'bg-emerald-100/50 border-emerald-200 text-emerald-700' :
-                  application.status === 'rejected' ? 'bg-rose-100/50 border-rose-200 text-rose-700' :
-                    'bg-blue-100/50 border-blue-200 text-blue-700'
+                <div className={`inline-flex items-center gap-3 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-10 border-2 ${application.status === 'approved' ? 'bg-emerald-100/30 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300' :
+                    application.status === 'rejected' ? 'bg-rose-100/30 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300' :
+                      'bg-blue-100/30 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300'
                   }`}>
-                  <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-current animate-pulse"></span>
                   {application.status}
                 </div>
 
-                <p className={`text-sm font-semibold leading-relaxed mb-10 ${application.status === 'approved' ? 'text-emerald-800' :
-                  application.status === 'rejected' ? 'text-rose-800' :
-                    'text-blue-800'
+                <p className={`text-sm font-bold leading-relaxed mb-12 max-w-sm ${application.status === 'approved' ? 'text-emerald-800/80 dark:text-emerald-400/80' :
+                    application.status === 'rejected' ? 'text-rose-800/80 dark:text-rose-400/80' :
+                      'text-blue-800/80 dark:text-blue-400/80'
                   }`}>
                   {statusInfo.message}
                 </p>
@@ -253,78 +258,99 @@ export default function ApplicationStatus() {
                 {application.status === 'approved' ? (
                   <button
                     onClick={() => navigate('/seller/dashboard')}
-                    className="w-full py-5 bg-gray-900 text-white font-bold text-xs uppercase tracking-wide rounded-2xl hover:bg-black shadow-lg transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                    className="w-full h-16 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-indigo-500/20 transition-all flex items-center justify-center gap-4 group/btn"
                   >
-                    <span>Go to Dashboard</span>
-                    <i className="ri-arrow-right-line"></i>
+                    <span>Merchant Dashboard</span>
+                    <i className="ri-arrow-right-fill text-xl group-hover:translate-x-1 transition-transform"></i>
                   </button>
                 ) : application.status === 'rejected' ? (
                   <button
                     onClick={() => navigate('/seller/apply')}
-                    className="w-full py-5 bg-gray-900 text-white font-bold text-xs uppercase tracking-wide rounded-2xl hover:bg-black shadow-lg transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                    className="w-full h-16 bg-rose-600 text-white font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:bg-rose-700 hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-rose-500/20 transition-all flex items-center justify-center gap-4 group/btn"
                   >
-                    <span>Update Application</span>
-                    <i className="ri-refresh-line"></i>
+                    <span>Resubmit Details</span>
+                    <i className="ri-refresh-line text-xl group-hover:rotate-180 transition-transform duration-700"></i>
                   </button>
                 ) : (
-                  <div className="w-full py-5 bg-white/50 border border-blue-200 text-blue-900 font-bold text-[10px] uppercase tracking-wide rounded-2xl flex items-center justify-center gap-3">
-                    <i className="ri-loader-4-line animate-spin"></i>
-                    Awaiting Verification
+                  <div className="w-full h-16 bg-white dark:bg-slate-900/50 border-2 border-blue-200 dark:border-blue-500/20 text-blue-900 dark:text-blue-400 font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-4">
+                    <i className="ri-loader-5-line animate-spin text-xl"></i>
+                    Verification In Progress
                   </div>
                 )}
               </div>
             </div>
 
             {application.rejection_reason && (
-              <div className="mt-8 p-8 bg-rose-50 border border-rose-100 rounded-2xl">
-                <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wide mb-3">Admin Comments</p>
-                <p className="text-rose-900 font-semibold leading-relaxed italic">"{application.rejection_reason}"</p>
+              <div className="mt-8 p-10 bg-rose-50/50 dark:bg-rose-500/5 border-2 border-rose-100 dark:border-rose-500/20 rounded-[2.5rem] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full translate-x-5 -translate-y-5"></div>
+                <p className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] mb-4">Official Feedback</p>
+                <div className="flex gap-4">
+                  <i className="ri-double-quotes-l text-4xl text-rose-200 dark:text-rose-500/20"></i>
+                  <p className="text-rose-900 dark:text-rose-300 font-bold leading-relaxed italic text-lg">{application.rejection_reason}</p>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Details Section */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-4">Business Name</p>
-                <p className="text-xl font-bold text-gray-900 tracking-tight">{application.business_name}</p>
+          {/* Details & Metadata Section */}
+          <div className="lg:col-span-7 space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:border-blue-500/30 transition-colors">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                  <i className="ri-bank-line text-blue-500"></i>
+                  Business Entity
+                </p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{application.business_name}</p>
               </div>
-              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-4">Category</p>
-                <p className="text-xl font-bold text-gray-900 tracking-tight">{application.business_category}</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-4">Business Description</p>
-              <p className="text-gray-600 font-semibold leading-relaxed">{application.business_description}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-4">Phone Number</p>
-                <p className="text-xl font-bold text-gray-900 tracking-tight">{application.contact_phone}</p>
-              </div>
-              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-4">Email Address</p>
-                <p className="text-sm font-bold text-blue-600 tracking-tight break-all">{application.contact_email}</p>
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:border-blue-500/30 transition-colors">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                  <i className="ri-price-tag-3-line text-blue-500"></i>
+                  Industry Niche
+                </p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{application.business_category}</p>
               </div>
             </div>
 
-            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                  <i className="ri-calendar-check-line text-blue-600"></i>
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:border-blue-500/30 transition-colors">
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <i className="ri-article-line text-blue-500"></i>
+                Business Description
+              </p>
+              <p className="text-slate-600 dark:text-slate-400 font-bold leading-relaxed text-lg">{application.business_description}</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:border-blue-500/30 transition-colors">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                  <i className="ri-phone-fill text-blue-500"></i>
+                  Contact Line
+                </p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{application.contact_phone}</p>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:border-blue-500/30 transition-colors">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                  <i className="ri-mail-fill text-blue-500"></i>
+                  Electronic Mail
+                </p>
+                <p className="text-lg font-black text-blue-600 dark:text-blue-400 tracking-tight break-all leading-none">{application.contact_email}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6 group">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                  <i className="ri-calendar-event-fill text-blue-600 dark:text-blue-400 text-2xl"></i>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-none mb-1">Submission Date</p>
-                  <p className="text-xs font-bold text-gray-900">
-                    {new Date(application.created_at).toLocaleDateString()}
+                <div className="text-center sm:text-left">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">Entry Timestamp</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white">
+                    {new Date(application.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
               </div>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Verified Record</p>
+              <div className="px-6 py-2 bg-white dark:bg-slate-900 rounded-full border border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em]">Encrypted Log</p>
+              </div>
             </div>
           </div>
         </div>

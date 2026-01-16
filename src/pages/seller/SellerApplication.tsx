@@ -58,7 +58,7 @@ export default function SellerApplication() {
     if (!user) return;
 
     // Check if user is already a seller
-    if (profile?.role === 'seller') {
+    if (profile?.role === 'seller' || profile?.role === 'publisher_seller') {
       setNotification({ type: 'warning', message: 'You are already a seller! You cannot apply again.' });
       setTimeout(() => navigate('/seller/dashboard'), 2000);
       return;
@@ -106,27 +106,30 @@ export default function SellerApplication() {
 
       if (error) throw error;
 
-      // Notify Admins
-      try {
-        const { data: admins } = await supabase
-          .from('profiles')
-          .select('phone')
-          .in('role', ['admin', 'super_admin'])
-          .not('phone', 'is', null);
+      // Notify Admins (Non-blocking)
+      const notifyAdmins = async () => {
+        try {
+          const { data: admins } = await supabase
+            .from('profiles')
+            .select('phone')
+            .in('role', ['admin', 'super_admin'])
+            .not('phone', 'is', null);
 
-        if (admins && admins.length > 0) {
-          const adminPhones = admins.map(a => a.phone).filter(p => p && p.length > 9);
-          if (adminPhones.length > 0) {
-            import('../../lib/arkesel').then(({ sendSMS }) => {
+          if (admins && admins.length > 0) {
+            const adminPhones = admins.map(a => a.phone).filter(p => p && p.length > 9);
+            if (adminPhones.length > 0) {
+              const { sendSMS } = await import('../../lib/arkesel');
               const uniquePhones = [...new Set(adminPhones)];
-              sendSMS(uniquePhones, `New Seller Application: ${formData.businessName} has applied to become a seller. Please check the Admin Portal for review.`)
-                .catch(err => console.error('Failed to notify admins:', err));
-            });
+              await sendSMS(uniquePhones, `New Seller Application: ${formData.businessName} has applied to become a seller. Please check the Admin Portal for review.`);
+            }
           }
+        } catch (notifyError) {
+          console.error('Error fetching admins for notification:', notifyError);
         }
-      } catch (notifyError) {
-        console.error('Error fetching admins for notification:', notifyError);
-      }
+      };
+
+      // Fire and forget notification
+      notifyAdmins();
 
 
       setNotification({ type: 'success', message: '✅ Application submitted successfully! Redirecting to status page...' });
@@ -164,219 +167,263 @@ export default function SellerApplication() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-          <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-bold uppercase tracking-widest rounded-full mb-6">
-              <i className="ri-medal-line text-blue-400 dark:text-blue-600"></i>
-              Seller Registration
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20 lg:py-28 relative">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-40 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
+        <div className="absolute bottom-20 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -z-10"></div>
+
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16 md:mb-24">
+          <div className="text-center md:text-left max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-gray-900 to-gray-800 dark:from-white dark:to-gray-100 text-white dark:text-gray-900 text-[10px] font-black uppercase tracking-[0.2em] rounded-full mb-8 shadow-xl shadow-blue-500/10">
+              <i className="ri-medal-fill text-blue-400 dark:text-blue-600"></i>
+              Verified Merchant Program
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight mb-4">Start Your<br /><span className="text-blue-600">Business.</span></h1>
-            <p className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-[10px] md:text-xs">Join the PU Connect official student marketplace</p>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter leading-[0.85] mb-8">
+              Empower Your<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600">Business.</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-xs flex items-center justify-center md:justify-start gap-3">
+              <span className="w-8 h-[2px] bg-blue-600/30"></span>
+              The premier digital gateway for student entrepreneurs
+            </p>
           </div>
+
           <button
             onClick={() => navigate('/')}
-            className="text-[10px] font-bold text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-widest transition-colors cursor-pointer flex items-center justify-center gap-2 group"
+            className="hidden md:flex h-14 px-8 items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 transition-all cursor-pointer group shadow-sm active:scale-95"
           >
-            <i className="ri-arrow-left-s-line text-lg group-hover:-translate-x-1 transition-transform"></i>
-            Cancel Application
+            <i className="ri-arrow-left-line text-lg mr-3 group-hover:-translate-x-1 transition-transform"></i>
+            Cancel Discovery
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Information Section */}
-          <div className="lg:col-span-4 space-y-8 animate-fade-in-up delay-100">
-            <div className="bg-gray-900 dark:bg-gray-800 text-white p-8 rounded-[2rem] shadow-xl shadow-gray-900/10 dark:shadow-none transition-colors">
-              <h3 className="text-xl font-bold mb-8 tracking-tight flex items-center gap-3">
-                <i className="ri-information-line text-blue-400"></i>
-                Program Details
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
+          {/* Information Section - Sticky on Desktop */}
+          <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-32 lg:h-fit">
+            <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-10 rounded-[2.5rem] shadow-2xl shadow-indigo-500/20 dark:shadow-none transition-all relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-bl-full translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700"></div>
+              <h3 className="text-2xl font-black mb-10 tracking-tight flex items-center gap-4 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                  <i className="ri-flashlight-line"></i>
+                </div>
+                Membership
               </h3>
-              <ul className="space-y-6">
+              <ul className="space-y-8 relative z-10">
                 {[
-                  { label: 'Registration Fee', value: 'GH₵ 50 / Mo', desc: 'Secure platform listing rights' },
-                  { label: 'Validity Period', value: '30 Days', desc: 'Renewable monthly cycle' },
-                  { label: 'Review Time', value: '24 Hours', desc: 'Application processing time' },
-                  { label: 'Verification', value: 'Required', desc: 'Official student status' }
+                  { label: 'Merchant Fee', value: 'GH₵ 50 / Mo', desc: 'Full infrastructure access & listing rights', icon: 'ri-money-dollar-circle-line' },
+                  { label: 'Settlement', value: 'Immediate', desc: 'Direct transactions with buyers', icon: 'ri-safe-line' },
+                  { label: 'Growth Plan', value: 'Premium', desc: 'Advanced analytics & featured boosting', icon: 'ri-line-chart-line' },
+                  { label: 'Priority Support', value: '24/7 Access', desc: 'Direct line to community managers', icon: 'ri-customer-service-2-line' }
                 ].map((item, i) => (
-                  <li key={i} className="group">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 group-hover:text-blue-400 transition-colors">{item.label}</p>
-                    <p className="text-lg font-bold tracking-tight mb-1">{item.value}</p>
-                    <p className="text-[10px] text-gray-400 font-semibold">{item.desc}</p>
+                  <li key={i} className="flex gap-5 group">
+                    <div className="mt-1 w-5 h-5 flex-shrink-0 text-blue-400 group-hover:scale-110 transition-transform">
+                      <i className={`${item.icon} text-lg`}></i>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                      <p className="text-xl font-black tracking-tight mb-1 group-hover:text-blue-500 transition-colors">{item.value}</p>
+                      <p className="text-[11px] text-slate-400 font-bold leading-relaxed">{item.desc}</p>
+                    </div>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-8 rounded-[2rem] border border-blue-100/50 dark:border-blue-800/30 transition-colors">
-              <i className="ri-shield-check-fill text-3xl text-blue-600 dark:text-blue-400 mb-4 block"></i>
-              <p className="text-sm font-bold text-blue-950 dark:text-blue-200 uppercase tracking-widest mb-2">Data Protection</p>
-              <p className="text-xs font-semibold text-blue-800/80 dark:text-blue-300/80 leading-relaxed">
-                Your business information is securely stored and synchronized across the PU Connect marketplace ecosystem.
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm relative group overflow-hidden">
+              <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-blue-500/5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <i className="ri-shield-user-fill text-2xl"></i>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Secure Program</p>
+                  <p className="text-[10px] font-bold text-slate-500">End-to-end encryption</p>
+                </div>
+              </div>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
+                Your credentials are encrypted and strictly used for platform validation. We prioritize your privacy and business integrity.
               </p>
             </div>
           </div>
 
           {/* Form Section */}
-          <div className="lg:col-span-8 animate-slide-in-right delay-200">
-            <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl shadow-gray-200/40 dark:shadow-none border border-gray-100 dark:border-gray-800 p-8 md:p-12 transition-colors duration-300">
-              <form onSubmit={handleSubmit} className="space-y-10">
-                <div className="space-y-4">
-                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                    Business Logo
+          <div className="lg:col-span-8">
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 p-6 sm:p-10 md:p-16 transition-all duration-500">
+              <form onSubmit={handleSubmit} className="space-y-12">
+                {/* Visual Header for Mobile */}
+                <div className="md:hidden text-center mb-8 border-b border-slate-50 dark:border-slate-800 pb-8">
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Merchant Registration</h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Complete current profile</p>
+                </div>
+
+                <div className="space-y-6">
+                  <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-2">
+                    Visual Identity (Logo)
                   </label>
-                  <div className="flex items-center gap-6">
-                    <div className="w-24 h-24 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50/50 dark:bg-slate-800/30 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-700 group hover:border-blue-400 transition-all">
+                    <div className="w-32 h-32 flex-shrink-0 relative group/logo">
                       <ImageUploader
                         folder="profiles"
                         onImageUploaded={(url) => setFormData({ ...formData, businessLogo: url })}
-                        className="w-full h-full rounded-2xl bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors cursor-pointer flex items-center justify-center"
+                        className="w-full h-full rounded-3xl bg-white dark:bg-slate-800 border-none shadow-xl group-hover/logo:scale-[1.02] transition-transform cursor-pointer overflow-hidden flex items-center justify-center"
                       />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 transition-opacity rounded-3xl flex items-center justify-center pointer-events-none">
+                        <i className="ri-camera-lens-line text-white text-3xl"></i>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Upload Logo</p>
-                      <p className="text-xs text-gray-500">Recommended size: 500x500px. <br /> Supports JPG, PNG.</p>
+                    <div className="text-center sm:text-left">
+                      <p className="text-lg font-black text-slate-900 dark:text-white mb-2 tracking-tight transition-colors group-hover:text-blue-600">Represent Your Brand</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-bold uppercase tracking-wider">
+                        High-resolution 500x500 JPG/PNG recommended. <br className="hidden sm:block" />
+                        This logo defines your presence on campus.
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                      Business Name
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-2">
+                      Trade Name
                     </label>
                     <input
                       type="text"
                       required
                       value={formData.businessName}
                       onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                      className="w-full px-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
-                      placeholder="e.g. Trendy Campus Gear"
+                      className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-slate-800 rounded-2xl font-black outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm focus:shadow-xl focus:shadow-blue-500/5"
+                      placeholder="e.g. Campus Connect"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                      Business Category
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-2">
+                      Niche Category
                     </label>
-                    <div className="relative">
+                    <div className="relative group/select">
                       <select
                         required
                         value={formData.businessCategory}
                         onChange={(e) => setFormData({ ...formData, businessCategory: e.target.value })}
-                        className="w-full px-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white transition-all appearance-none cursor-pointer"
+                        className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-slate-800 rounded-2xl font-black outline-none text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer shadow-sm"
                       >
-                        <option value="">Select Category</option>
+                        <option value="">Choose Industry</option>
                         {categories.map((cat) => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
-                      <i className="ri-arrow-down-s-line absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                      <i className="ri-arrow-down-s-line absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xl group-hover/select:text-blue-500 transition-colors"></i>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                    Business Description
-                  </label>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                      Business Manifesto
+                    </label>
+                    <span className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">{formData.businessDescription.length}/500</span>
+                  </div>
                   <textarea
                     required
-                    rows={4}
+                    rows={5}
                     value={formData.businessDescription}
                     onChange={(e) => setFormData({ ...formData, businessDescription: e.target.value })}
-                    className="w-full px-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all resize-none"
-                    placeholder="Provide a detailed description of your products or services..."
+                    className="w-full px-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-slate-800 rounded-[2rem] font-black outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm resize-none focus:shadow-xl focus:shadow-blue-500/5"
+                    placeholder="Describe your vision, products, and what makes your business unique on campus..."
                     maxLength={500}
                   />
-                  <div className="flex justify-end pr-2">
-                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">{formData.businessDescription.length}/500</span>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                      Call Number
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-2">
+                      Primary Contact
                     </label>
                     <div className="relative group">
-                      <i className="ri-phone-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                      <i className="ri-phone-fill absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors text-xl"></i>
                       <input
                         type="tel"
                         required
                         value={formData.contactPhone}
                         onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                        className="w-full pl-12 pr-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
+                        className="w-full pl-14 pr-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-slate-800 rounded-2xl font-black outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm"
                         placeholder="054 123 4567"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                      WhatsApp Number
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-2">
+                      WhatsApp Channel
                     </label>
                     <div className="relative group">
-                      <i className="ri-whatsapp-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                      <i className="ri-whatsapp-fill absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors text-xl"></i>
                       <input
                         type="tel"
                         required
                         value={formData.whatsappNumber}
                         onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                        className="w-full pl-12 pr-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
+                        className="w-full pl-14 pr-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-emerald-500/30 focus:bg-white dark:focus:bg-slate-800 rounded-2xl font-black outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm"
                         placeholder="054 123 4567"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
-                    Contact Email
+                <div className="space-y-3">
+                  <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-2">
+                    Official Email
                   </label>
                   <div className="relative group">
-                    <i className="ri-mail-line absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                    <i className="ri-mail-send-fill absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors text-xl"></i>
                     <input
                       type="email"
                       required
                       value={formData.contactEmail}
                       onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                      className="w-full pl-12 pr-6 py-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600/20 font-semibold outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-all"
+                      className="w-full pl-14 pr-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-slate-800 rounded-2xl font-black outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm"
                       placeholder="business@example.com"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-6 pt-4">
+                <div className="pt-8">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-8 py-5 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-3 active:scale-[0.98]"
+                    className="w-full h-20 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-[0.3em] rounded-[1.5rem] hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-indigo-500/20 dark:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-4 relative overflow-hidden group/submit"
                   >
+                    <div className="absolute inset-0 bg-blue-600 translate-y-full group-hover/submit:translate-y-0 transition-transform duration-500 ease-out -z-10"></div>
                     {loading ? (
-                      <i className="ri-loader-4-line animate-spin text-xl"></i>
+                      <i className="ri-loader-4-line animate-spin text-2xl"></i>
                     ) : (
                       <>
-                        <span>Submit Application</span>
-                        <i className="ri-check-line text-lg"></i>
+                        <span className="relative z-10 group-hover/submit:text-white transition-colors">Finalize Application</span>
+                        <i className="ri-arrow-right-circle-fill text-2xl relative z-10 group-hover/submit:text-white transition-colors"></i>
                       </>
                     )}
                   </button>
+                  <p className="text-center mt-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    By submitting, you agree to our merchant code of conduct.
+                  </p>
                 </div>
               </form>
             </div>
           </div>
         </div>
 
-        <div className="mt-20 text-center">
-          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
-            Already registered?
+        <div className="mt-32 text-center animate-fade-in-up delay-300">
+          <div className="w-px h-16 bg-gradient-to-b from-transparent via-slate-200 dark:via-slate-800 to-transparent mx-auto mb-12"></div>
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mb-6">
+            Member of our network?
           </p>
           <button
             onClick={() => navigate('/seller/dashboard')}
-            className="inline-flex items-center gap-2 group text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+            className="inline-flex h-14 px-10 items-center gap-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl font-black text-xs text-slate-900 dark:text-white uppercase tracking-[0.2em] hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all cursor-pointer group"
           >
             Access Seller Dashboard
-            <i className="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
+            <i className="ri-external-link-line text-lg text-blue-500 group-hover:rotate-12 transition-transform"></i>
           </button>
         </div>
       </div>

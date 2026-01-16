@@ -109,6 +109,20 @@ export default function AddProduct() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Helper for System Admin Bypass
+  const adminInsertProduct = async (productData: any) => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+    if (isBypass && secret) {
+      const { data, error } = await supabase.rpc('admin_insert_product', {
+        product_data: productData,
+        secret_key: secret
+      });
+      return { error };
+    }
+    return await supabase.from('products').insert([productData]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -133,9 +147,7 @@ export default function AddProduct() {
         is_active: true,
       };
 
-      const { error } = await supabase
-        .from('products')
-        .insert([productData]);
+      const { error } = await adminInsertProduct(productData);
 
       if (error) throw error;
 
@@ -225,7 +237,7 @@ export default function AddProduct() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
+        <div className="flex flex-col-reverse xl:grid xl:grid-cols-5 gap-10">
           {/* Form Section */}
           <div className="xl:col-span-3 space-y-10">
             <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 md:p-14 relative overflow-hidden">

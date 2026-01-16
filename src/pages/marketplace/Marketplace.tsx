@@ -193,13 +193,13 @@ function Marketplace() {
               </h2>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-full md:w-auto">
               {/* Sort Dropdown */}
-              <div className="relative group z-30">
+              <div className="relative group z-30 w-full md:w-auto">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 py-3 pl-4 pr-10 rounded-xl font-bold text-xs uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:shadow-md transition-all"
+                  className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 py-3 pl-4 pr-10 rounded-xl font-bold text-xs uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:shadow-md transition-all w-full md:w-auto"
                 >
                   <option value="newest">Newest First</option>
                   <option value="popular">Most Popular</option>
@@ -213,7 +213,7 @@ function Marketplace() {
 
           {/* Product Grid */}
           {productsLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                 <div key={i} className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 h-[450px] animate-pulse border border-gray-100 dark:border-gray-800">
                   <div className="bg-gray-100 dark:bg-gray-800 h-64 rounded-[1.5rem] mb-4"></div>
@@ -223,7 +223,7 @@ function Marketplace() {
               ))}
             </div>
           ) : filteredAndSortedProducts?.length ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {filteredAndSortedProducts.map((product) => {
                 const seller = product.seller as Profile;
                 return (

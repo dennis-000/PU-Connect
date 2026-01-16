@@ -26,7 +26,7 @@ export default function NewsPublisherDashboard() {
     const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
     useEffect(() => {
-        if (!['news_publisher', 'admin', 'super_admin'].includes(profile?.role || '')) {
+        if (!['news_publisher', 'admin', 'super_admin', 'publisher_seller'].includes(profile?.role || '')) {
             navigate('/marketplace');
             return;
         }
@@ -66,30 +66,49 @@ export default function NewsPublisherDashboard() {
         setLoading(true);
 
         try {
-            const { data: articles, error } = await supabase
+            let statsQuery = supabase
                 .from('campus_news')
-                .select('is_published, views_count')
-                .eq('author_id', profile.id);
+                .select('is_published, views_count, author_id');
+
+            // Logic: 
+            // - Super Admins see EVERYTHING.
+            // - Publishers/Admins see ALL published news + their own drafts.
+            const { data: articles, error } = await statsQuery;
 
             if (error) throw error;
 
             if (articles) {
+                const visibleArticles = articles.filter(a =>
+                    profile.role === 'super_admin' ||
+                    a.is_published === true ||
+                    a.author_id === profile.id
+                );
+
                 setStats({
-                    published: articles.filter(a => a.is_published).length,
-                    drafts: articles.filter(a => !a.is_published).length,
-                    totalViews: articles.reduce((acc, curr) => acc + (curr.views_count || 0), 0)
+                    published: visibleArticles.filter(a => a.is_published).length,
+                    drafts: visibleArticles.filter(a => !a.is_published).length,
+                    totalViews: visibleArticles.reduce((acc, curr) => acc + (curr.views_count || 0), 0)
                 });
             }
 
-            const { data: recent, error: recentError } = await supabase
+            let recentQuery = supabase
                 .from('campus_news')
-                .select('id, title, views_count, is_published, created_at, category')
-                .eq('author_id', profile.id)
+                .select('id, title, views_count, is_published, created_at, category, author_id')
                 .order('created_at', { ascending: false })
-                .limit(5);
+                .limit(10); // Show more on dashboard
+
+            const { data: recent, error: recentError } = await recentQuery;
 
             if (recentError) throw recentError;
-            setRecentArticles(recent || []);
+
+            // Filter recent articles in JS to match visibility logic
+            const filteredRecent = (recent || []).filter(a =>
+                profile.role === 'super_admin' ||
+                a.is_published === true ||
+                a.author_id === profile.id
+            ).slice(0, 5);
+
+            setRecentArticles(filteredRecent);
 
         } catch (error) {
             console.error('Error fetching publisher data:', error);
@@ -148,6 +167,13 @@ export default function NewsPublisherDashboard() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <Link
+                            to="/profile"
+                            className="h-16 px-6 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 font-bold rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all text-xs uppercase tracking-widest flex items-center gap-3 active:scale-95"
+                        >
+                            <i className="ri-user-smile-line text-xl text-blue-500"></i>
+                            My Profile
+                        </Link>
                         <Link
                             to="/admin/news"
                             className="h-16 px-8 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl hover:scale-105 transition-all text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95"

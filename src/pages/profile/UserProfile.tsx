@@ -186,7 +186,9 @@ export default function UserProfile() {
                 </span>
               </div>
               <h1 className="text-4xl md:text-7xl font-bold text-white tracking-tight leading-none mb-4 animate-fade-in-up delay-100">
-                Student <br />
+                {profile.role === 'admin' || profile.role === 'super_admin' ? 'System' :
+                  profile.role === 'news_publisher' ? 'Publisher' :
+                    profile.role === 'seller' ? 'Merchant' : 'Student'} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Profile.</span>
               </h1>
             </div>
