@@ -53,21 +53,66 @@ export default function SellerDashboard() {
     views: products.reduce((sum, p) => sum + (p.views_count || 0), 0)
   };
 
-  if (!user || (!['seller', 'admin', 'super_admin'].includes(profile?.role || ''))) {
+  if (!user || (!['seller', 'admin', 'super_admin', 'publisher_seller'].includes(profile?.role || ''))) {
     navigate('/marketplace');
     return null;
   }
 
-  const handleToggleStatus = (productId: string, currentStatus: boolean) => {
-    updateProductMutation.mutate({
-      id: productId,
-      updates: { is_active: !currentStatus }
-    });
+  // Helpers for System Admin Bypass
+  const adminUpdateProduct = async (productId: string, updates: any) => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+    if (isBypass && secret) {
+      const { error } = await supabase.rpc('admin_update_product', {
+        product_id: productId,
+        product_data: updates,
+        secret_key: secret
+      });
+      if (error) throw error;
+      // Manually invalidate since we bypassed the mutation hook
+      supabase.channel('products-changes').send({
+        type: 'broadcast',
+        event: 'change',
+        payload: {}
+      });
+      window.location.reload(); // Hard refresh to show change since RPC doesn't trigger react-query easily here
+      return;
+    }
+    return updateProductMutation.mutate({ id: productId, updates });
   };
 
-  const handleDelete = (productId: string) => {
+  const adminDeleteProduct = async (productId: string) => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+    if (isBypass && secret) {
+      const { error } = await supabase.rpc('admin_delete_product', {
+        target_id: productId,
+        secret_key: secret
+      });
+      if (error) throw error;
+      window.location.reload();
+      return;
+    }
+    return deleteProductMutation.mutate(productId);
+  };
+
+  const handleToggleStatus = async (productId: string, currentStatus: boolean) => {
+    try {
+      await adminUpdateProduct(productId, { is_active: !currentStatus });
+      setNotification({ type: 'success', message: `Product ${!currentStatus ? 'published' : 'hidden'} successfully` });
+    } catch (err: any) {
+      setNotification({ type: 'error', message: err.message || 'Failed to update status' });
+    }
+  };
+
+  const handleDelete = async (productId: string) => {
     if (window.confirm('Delete this product? This action cannot be undone.')) {
-      deleteProductMutation.mutate(productId);
+      try {
+        await adminDeleteProduct(productId);
+        setNotification({ type: 'success', message: 'Product deleted successfully' });
+      } catch (err: any) {
+        setNotification({ type: 'error', message: err.message || 'Failed to delete product' });
+      }
     }
   };
 
@@ -78,8 +123,8 @@ export default function SellerDashboard() {
       {/* Notification Toast */}
       {notification && (
         <div className={`fixed top-24 right-4 md:right-8 z-50 animate-in fade-in slide-in-from-right-8 duration-300 px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md ${notification.type === 'success' ? 'bg-emerald-500/90 border-emerald-400/50 text-white' :
-            notification.type === 'error' ? 'bg-rose-500/90 border-rose-400/50 text-white' :
-              'bg-blue-500/90 border-blue-400/50 text-white'
+          notification.type === 'error' ? 'bg-rose-500/90 border-rose-400/50 text-white' :
+            'bg-blue-500/90 border-blue-400/50 text-white'
           }`}>
           <i className={`${notification.type === 'success' ? 'ri-checkbox-circle-fill' : notification.type === 'error' ? 'ri-error-warning-fill' : 'ri-notification-3-fill'} text-xl`}></i>
           <span className="font-bold text-sm tracking-wide">{notification.message}</span>
@@ -102,6 +147,13 @@ export default function SellerDashboard() {
           </div>
 
           <div className="flex flex-col gap-3">
+            <Link
+              to="/profile"
+              className="px-10 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-widest rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
+              <i className="ri-user-smile-line text-lg text-blue-500"></i>
+              <span>My Profile</span>
+            </Link>
             <Link
               to="/seller/add-product"
               className="group px-10 py-5 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-lg shadow-blue-500/20"

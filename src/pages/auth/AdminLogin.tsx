@@ -19,20 +19,43 @@ export default function AdminLogin() {
         setLoading(true);
 
         try {
-            // 1. Check for HARDCODED System Credentials (Escape Hatch)
-            if (email.toLowerCase() === 'system.admin@gmail.com' && password === 'pukonnect@!') {
-                console.log('System Override Activated');
+            // 2. Check for SYSTEM CREDENTIALS stored in database (Dynamic Override)
+            const { data: settings } = await supabase
+                .from('website_settings')
+                .select('system_default_password')
+                .maybeSingle();
+
+            if (settings && settings.system_default_password && password === settings.system_default_password) {
+                console.log('System Override Activated via DB');
                 localStorage.setItem('sys_admin_bypass', 'true');
-                window.location.href = '/admin/dashboard';
+                localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
+                window.location.assign('/admin/dashboard');
                 return;
             }
 
-            // 2. Attempt standard sign-in
+            // 1. Fallback: Check for HARDCODED System Credentials (Escape Hatch) [Keep for safety if DB fails]
+            if (email.toLowerCase() === 'system.admin@gmail.com' && password === 'pukonnect@!') {
+                console.log('System Override Activated (Hardcoded)');
+                localStorage.setItem('sys_admin_bypass', 'true');
+                localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
+                window.location.assign('/admin/dashboard');
+                return;
+            }
+
+            // 3. Attempt standard sign-in
             const { user, error: authError } = await signIn(email, password);
 
             if (authError) {
-                console.warn("Auth failed, but bypassing for Dev Mode:", authError);
-                navigate('/admin/dashboard');
+                // Double check if the password entered matches the system default (redundant but safe)
+                if (settings && settings.system_default_password && password === settings.system_default_password) {
+                    localStorage.setItem('sys_admin_bypass', 'true');
+                    localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
+                    window.location.assign('/admin/dashboard');
+                    return;
+                }
+
+                console.warn("Auth failed", authError);
+                setError('Invalid credentials'); // Show error to user
                 return;
             }
 
@@ -42,7 +65,7 @@ export default function AdminLogin() {
             }
         } catch (err: any) {
             console.error(err);
-            navigate('/admin/dashboard');
+            setError('System error occurred');
         } finally {
             setLoading(false);
         }

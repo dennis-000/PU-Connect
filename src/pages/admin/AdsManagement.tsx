@@ -25,7 +25,7 @@ export default function AdsManagement() {
 
     useEffect(() => {
         if (!profile) return;
-        if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+        if (!['admin', 'super_admin', 'news_publisher', 'publisher_seller'].includes(profile?.role || '')) {
             navigate('/');
             return;
         }

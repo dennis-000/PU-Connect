@@ -21,7 +21,7 @@ export default function Home() {
   const { url: heroMain } = useSiteContent(CONTENT_KEYS.HOME_HERO_MAIN);
   const { url: heroAerial } = useSiteContent(CONTENT_KEYS.HOME_HERO_AERIAL);
 
-  const heroImages = [heroMain, heroAerial, '/image 1.jpg'];
+  const heroImages = [heroMain, heroAerial, '/image 1.jpg', '/image 5.jpg'];
 
   // Get featured products (first 4 products)
   const featuredProducts = allProducts.slice(0, 4);
@@ -76,8 +76,8 @@ export default function Home() {
               <img
                 src={img}
                 alt={`Campus View ${index + 1}`}
-                className={`w-full h-full object-cover object-top transition-transform duration-[10s] ease-linear ${index === heroSlide ? 'scale-110' : 'scale-100'
-                  }`}
+                className={`w-full h-full object-cover transition-transform duration-[10s] ease-linear ${index >= 2 ? 'object-center' : 'object-top'
+                  } ${index === heroSlide ? 'scale-110' : 'scale-100'}`}
               />
             </div>
           ))}
@@ -88,7 +88,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px]"></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 w-full pt-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 w-full pt-28 md:pt-32">
           <div className="max-w-4xl bg-gray-900/10 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl animate-fade-in-up">
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 md:mb-6 leading-[1.1] md:leading-[0.95] tracking-tight drop-shadow-lg">
               Connect.<br />
@@ -192,7 +192,7 @@ export default function Home() {
               <div
                 key={cat.id}
                 onClick={() => handleProductClick(cat.id)}
-                className="group relative h-[350px] md:h-[450px] rounded-[2rem] overflow-hidden cursor-pointer shadow-lg hover:-translate-y-2 transition-all duration-700"
+                className="group relative h-[260px] md:h-[450px] rounded-[2rem] overflow-hidden cursor-pointer shadow-lg hover:-translate-y-2 transition-all duration-700"
               >
                 <img
                   src={getOptimizedImageUrl(cat.img, 800, 80)}
@@ -379,7 +379,7 @@ export default function Home() {
           {isNewsLoading ? (
             <div className="h-[400px] w-full bg-white/5 rounded-[2.5rem] animate-pulse"></div>
           ) : featuredNews.length > 0 ? (
-            <div className="relative h-[500px] md:h-[600px] rounded-[2.5rem] overflow-hidden shadow-2xl group border border-white/5">
+            <div className="relative h-[400px] md:h-[600px] rounded-[2.5rem] overflow-hidden shadow-2xl group border border-white/5">
               {featuredNews.map((news, index) => (
                 <div
                   key={news.id}
@@ -433,12 +433,20 @@ export default function Home() {
       {/* Internship Opportunities Slider */}
       <InternshipSlider />
       <section className="py-24 relative overflow-hidden bg-gray-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-indigo-800 to-gray-900 opacity-90"></div>
+        {/* Background Image Integration */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/image 5.jpg"
+            alt="Campus Lifestyle"
+            className="w-full h-full object-cover object-center opacity-40 transition-all duration-1000 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-indigo-900/80 to-gray-900/90"></div>
+        </div>
 
         {/* Animated Background Mesh */}
-        <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500 rounded-full blur-[120px] opacity-30 translate-x-1/3 -translate-y-1/3 animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[100px] opacity-30 -translate-x-1/3 translate-y-1/3"></div>
+        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500 rounded-full blur-[120px] opacity-20 translate-x-1/3 -translate-y-1/3 animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[100px] opacity-20 -translate-x-1/3 translate-y-1/3"></div>
 
         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-widest mb-8 shadow-lg">
