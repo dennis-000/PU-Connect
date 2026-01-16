@@ -1,34 +1,57 @@
-import express from 'express';
-import bodyParser from 'body-parser';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const app = express();
-app.use(bodyParser.json());
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
-  next();
-});
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-app.options('*', (req, res) => {
-  res.send('ok');
-});
+serve(async (req) => {
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
-app.post('/initialize-paystack-payment', async (req, res) => {
   try {
-    const { email, amount, metadata } = req.body;
+    const { email, amount, metadata } = await req.json()
 
-    if (!email || !amount) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    console.log('Payment initialization request:', { email, amount, metadata });
+
+    // Validation
+    if (!email || typeof email !== 'string') {
+      console.error('Invalid or missing email');
+      return new Response(JSON.stringify({
+        error: 'Customer email is required and must be a valid string'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    // Get Paystack secret key from environment
-    const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!amount || typeof amount !== 'number' || amount <= 0) {
+      console.error('Invalid or missing amount:', amount);
+      return new Response(JSON.stringify({
+        error: 'Payment amount is required and must be a positive number'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY')
     if (!paystackSecretKey) {
-      return res.status(500).json({ error: 'Paystack not configured' });
+      console.error('PAYSTACK_SECRET_KEY environment variable not set');
+      return new Response(JSON.stringify({
+        error: 'Payment gateway is not configured. Please contact support.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
+
+    console.log(`Initializing Paystack payment for ${email} - Amount: GHS ${amount}`);
 
     // Initialize payment with Paystack
-    const response = await fetch('https://api.paystack.co/transaction/initialize', {
+    const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${paystackSecretKey}`,
@@ -36,35 +59,69 @@ app.post('/initialize-paystack-payment', async (req, res) => {
       },
       body: JSON.stringify({
         email,
-        amount: amount * 100, // Convert to kobo (smallest currency unit)
+        amount: Math.round(amount * 100), // Convert to kobo/pesewas
         currency: 'GHS',
         metadata: {
           ...metadata,
-          subscription_type: 'seller_monthly',
+          custom_fields: [
+            {
+              display_name: "Service Type",
+              variable_name: "service_type",
+              value: metadata?.type || "general"
+            }
+          ]
         },
       }),
+    })
+
+    const paystackData = await paystackResponse.json()
+
+    console.log('Paystack API response:', {
+      status: paystackData.status,
+      message: paystackData.message
     });
 
-    const data = await response.json();
-
-    if (!data.status) {
-      return res.status(400).json({ error: 'Payment initialization failed', details: data });
+    if (!paystackData.status || !paystackData.data) {
+      console.error('Paystack initialization failed:', paystackData);
+      return new Response(JSON.stringify({
+        error: 'Payment initialization failed',
+        details: paystackData.message || 'Unknown error from payment gateway'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    return res.status(200).json({
+    console.log('Payment initialized successfully. Reference:', paystackData.data.reference);
+
+    return new Response(JSON.stringify({
       success: true,
-      authorization_url: data.data.authorization_url,
-      access_code: data.data.access_code,
-      reference: data.data.reference,
-    });
+      authorization_url: paystackData.data.authorization_url,
+      reference: paystackData.data.reference,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
 
   } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
-  }
-});
+    console.error('Edge Function Error:', error);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    // Handle JSON parsing errors
+    if (error instanceof SyntaxError) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request format. Please check your request data.'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    return new Response(JSON.stringify({
+      error: 'Internal server error',
+      details: error.message || 'An unexpected error occurred'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})

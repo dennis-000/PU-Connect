@@ -8,6 +8,8 @@ export type Message = {
   sender_id: string;
   receiver_id: string;
   message: string;
+  attachment_url?: string;
+  attachment_type?: 'image' | 'video' | 'file';
   is_read: boolean;
   created_at: string;
 };
@@ -139,8 +141,34 @@ export function useMessages(conversationId: string | null) {
   });
 
   const sendMessage = useMutation({
-    mutationFn: async ({ message, receiverId }: { message: string, receiverId: string }) => {
+    mutationFn: async ({ message, receiverId, file }: { message: string, receiverId: string, file?: File }) => {
       if (!conversationId || !user) throw new Error('Missing required data');
+
+      let attachmentUrl = null;
+      let attachmentType = null;
+
+      if (file) {
+        // Upload file to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${conversationId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(fileName);
+
+        attachmentUrl = publicUrlData.publicUrl;
+
+        // Determine attachment type
+        if (file.type.startsWith('image/')) attachmentType = 'image';
+        else if (file.type.startsWith('video/')) attachmentType = 'video';
+        else attachmentType = 'file';
+      }
 
       const { data, error } = await supabase
         .from('messages')
@@ -149,6 +177,8 @@ export function useMessages(conversationId: string | null) {
           sender_id: user.id,
           receiver_id: receiverId,
           message,
+          attachment_url: attachmentUrl,
+          attachment_type: attachmentType,
           is_read: false,
         })
         .select()
@@ -156,11 +186,13 @@ export function useMessages(conversationId: string | null) {
 
       if (error) throw error;
 
-      // Update conversation's last message
+      // Update conversation's last message with preview text
+      const lastMessageText = file ? (message ? `📷 ${message}` : 'Sent an attachment') : message;
+
       await supabase
         .from('conversations')
         .update({
-          last_message: message,
+          last_message: lastMessageText,
           last_message_at: new Date().toISOString(),
         })
         .eq('id', conversationId);
@@ -218,7 +250,9 @@ export function useCreateConversation() {
         query = query.eq('product_id', productId);
       }
 
-      const { data: existing } = await query.single();
+      const { data: existing, error: fetchError } = await query.maybeSingle();
+
+      if (fetchError) throw fetchError;
 
       if (existing) return existing.id;
 

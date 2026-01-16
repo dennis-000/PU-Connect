@@ -36,8 +36,15 @@ export default function ProductDetail() {
 
     if (!product) return;
 
+    // Prevent messaging yourself
+    if (user.id === product.seller_id) {
+      alert("You cannot message yourself!");
+      return;
+    }
+
     // Check if conversation already exists for this product
-    const existing = conversations.find(c =>
+    // A conversation exists if the current user is a participant (buyer or seller) AND the product matches
+    const existing = conversations?.find(c =>
       c.product_id === product.id &&
       (c.buyer_id === user.id || c.seller_id === user.id)
     );
@@ -54,9 +61,9 @@ export default function ProductDetail() {
       onSuccess: () => {
         navigate('/messages');
       },
-      onError: (error) => {
+      onError: (error: any) => {
         console.error('Error creating conversation:', error);
-        alert('Failed to start conversation. Please try again.');
+        alert(`Failed to start conversation: ${error.message || 'Unknown error'}`);
       }
     });
   };
