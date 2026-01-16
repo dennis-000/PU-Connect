@@ -18,7 +18,7 @@ export type Profile = {
   faculty?: string;
   phone?: string;
   avatar_url?: string;
-  role: 'buyer' | 'seller' | 'admin' | 'super_admin' | 'news_publisher';
+  role: 'buyer' | 'seller' | 'admin' | 'super_admin' | 'news_publisher' | 'publisher_seller';
   is_active: boolean;
   last_seen?: string;
   is_online?: boolean;

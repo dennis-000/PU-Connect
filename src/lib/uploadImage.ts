@@ -35,7 +35,7 @@ export async function uploadImage(
 
     const sysBypass = localStorage.getItem('sys_admin_bypass');
     if (!userToUse && sysBypass === 'true') {
-      userToUse = { id: 'sys_admin_001' };
+      userToUse = { id: '00000000-0000-0000-0000-000000000000' };
     }
 
     if (!userToUse) {

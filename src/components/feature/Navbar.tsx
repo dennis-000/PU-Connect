@@ -46,6 +46,60 @@ export default function Navbar() {
     };
   }, [user, profile]);
 
+  // Real-time News Notifications
+  useEffect(() => {
+    // Only subscribe to INSERT events that are published
+    const channel = supabase
+      .channel('public:campus_news')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'campus_news' },
+        (payload: any) => {
+          if (payload.new.is_published) {
+            // Check if we have a simple toast system, if not, native alert or console for now, 
+            // but effectively we want a visual indicator.
+            // Since we don't have a global toast context readily shown in this file,
+            // we will use a custom DOM toast or similar if we can, or just alert?
+            // "put a notification or an alert".
+            // Let's create a temporary overlay or just a browser notification?
+            // Let's use a custom state for a "New News" banner/toast in the Navbar.
+            setNewsNotification({
+              title: payload.new.title,
+              id: payload.new.id
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'campus_news' },
+        (payload: any) => {
+          // If it just got published (wasn't before)
+          if (payload.new.is_published && !payload.old.is_published) {
+            setNewsNotification({
+              title: payload.new.title,
+              id: payload.new.id
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const [newsNotification, setNewsNotification] = useState<{ title: string, id: string } | null>(null);
+
+  // Auto-hide notification
+  useEffect(() => {
+    if (newsNotification) {
+      const timer = setTimeout(() => setNewsNotification(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [newsNotification]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -73,19 +127,17 @@ export default function Navbar() {
           setUnreadCount(count);
         }
 
-        // Check for seller application if user is a buyer
-        if (profile?.role === 'buyer') {
-          const { data: app, error: appError } = await supabase
-            .from('seller_applications')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle(); // Use maybeSingle to avoid 406 error if not found
+        // Check for seller application
+        const { data: app, error: appError } = await supabase
+          .from('seller_applications')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-          if (!appError && app) {
-            setHasApplication(true);
-          } else {
-            setHasApplication(false);
-          }
+        if (!appError && app) {
+          setHasApplication(true);
+        } else {
+          setHasApplication(false);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -119,6 +171,7 @@ export default function Navbar() {
     if (profile?.role === 'admin') return { label: 'Admin Dashboard', path: '/admin', icon: 'ri-dashboard-line' };
     if (profile?.role === 'news_publisher') return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
     if (profile?.role === 'seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
+    if (profile?.role === 'publisher_seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
 
     // If buyer has pending/rejected application
     if (hasApplication) return { label: 'Application Status', path: '/seller/status', icon: 'ri-file-list-3-line' };
@@ -130,6 +183,16 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+      {newsNotification && (
+        <div className="absolute top-20 left-0 right-0 z-40 flex justify-center animate-in slide-in-from-top-4 duration-500">
+          <div className="bg-blue-600/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3 cursor-pointer hover:bg-blue-600 transition-colors"
+            onClick={() => { setNewsNotification(null); navigate('/news'); }}>
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+            <p className="text-sm font-bold">New: {newsNotification.title}</p>
+            <i className="ri-arrow-right-line text-xs opacity-70"></i>
+          </div>
+        </div>
+      )}
       <div className="absolute inset-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm"></div>
 
       <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative">
@@ -179,13 +242,21 @@ export default function Navbar() {
                 Help Center
               </Link>
               <div className="w-px h-6 bg-gray-200 dark:bg-gray-800 mx-2"></div>
-              {profile?.role === 'seller' || profile?.role === 'admin' || profile?.role === 'super_admin' ? (
+              {['seller', 'admin', 'super_admin', 'publisher_seller'].includes(profile?.role || '') ? (
                 <Link
                   to="/seller/dashboard"
                   className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-95 transition-all flex items-center gap-2"
                 >
                   <i className="ri-dashboard-line text-lg"></i>
                   Seller Dashboard
+                </Link>
+              ) : hasApplication ? (
+                <Link
+                  to="/seller/status"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <i className="ri-file-list-3-line text-lg"></i>
+                  View Application Status
                 </Link>
               ) : (
                 <Link
@@ -247,7 +318,10 @@ export default function Navbar() {
                       <div className="px-2">
                         {[
                           { label: 'My Profile', path: '/profile', icon: 'ri-user-smile-line' },
-                          ...(dashboardItem ? [{ ...dashboardItem }] : []),
+                          ...(profile?.role === 'publisher_seller' ? [
+                            { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' },
+                            { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' }
+                          ] : dashboardItem ? [{ ...dashboardItem }] : []),
                           { label: 'Help Center', path: '/support', icon: 'ri-question-line' }
                         ].map((item) => (
                           <Link
@@ -340,12 +414,13 @@ export default function Navbar() {
               { label: 'Campus News', path: '/news', icon: 'ri-newspaper-line', color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
               { label: 'Help Center', path: '/support', icon: 'ri-customer-service-2-line', color: 'text-pink-400', bg: 'bg-pink-900/20' },
               {
-                label: 'Become a Seller',
-                path: user ? '/seller/apply' : '/seller/become',
-                icon: 'ri-store-2-line',
+                label: hasApplication ? 'Application Status' : 'Become a Seller',
+                path: hasApplication ? '/seller/status' : (user ? '/seller/apply' : '/seller/become'),
+                icon: hasApplication ? 'ri-file-list-3-line' : 'ri-store-2-line',
                 color: 'text-white',
-                // Special Orange-Red Gradient for Mobile Item
-                bg: 'bg-gradient-to-r from-orange-500 to-red-600 shadow-orange-900/20'
+                bg: hasApplication
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-blue-900/20'
+                  : 'bg-gradient-to-r from-orange-500 to-red-600 shadow-orange-900/20'
               },
             ].map((item) => (
               <Link

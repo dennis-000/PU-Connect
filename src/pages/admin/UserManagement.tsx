@@ -82,6 +82,16 @@ export default function UserManagement() {
     };
   }, []);
 
+  const adminHideAllProducts = async (targetUserId: string) => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+    if (isBypass && secret) {
+      const { error } = await supabase.rpc('admin_hide_all_products', { target_user_id: targetUserId, secret_key: secret });
+      return { error };
+    }
+    return await supabase.from('products').update({ is_active: false }).eq('seller_id', targetUserId);
+  };
+
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase
@@ -242,6 +252,22 @@ export default function UserManagement() {
     setOpenDropdown(null);
   };
 
+  const handleHideAllProducts = async (userId: string) => {
+    if (!window.confirm('This will deactivate all products listed by this user. Continue?')) return;
+    setSaving(true);
+    try {
+      const { error } = await adminHideAllProducts(userId);
+      if (error) throw error;
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      alert('All products for this user have been hidden');
+    } catch (err: any) {
+      alert('Failed to hide products: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveUser = async () => {
     if (!selectedUser) return;
 
@@ -393,9 +419,9 @@ export default function UserManagement() {
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)}></div>
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-20 overflow-hidden">
-                    {['all', 'buyer', 'seller', 'admin'].map(opt => (
+                    {['all', 'buyer', 'seller', 'news_publisher', 'publisher_seller', 'admin'].map(opt => (
                       <button key={opt} onClick={() => handleExportData(opt === 'all' ? undefined : opt)} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 capitalize">
-                        {opt} Users
+                        {opt.replace('_', ' ')} Users
                       </button>
                     ))}
                   </div>
@@ -427,6 +453,8 @@ export default function UserManagement() {
                 <option value="all">All Roles</option>
                 <option value="buyer">Buyers</option>
                 <option value="seller">Sellers</option>
+                <option value="news_publisher">News Publishers</option>
+                <option value="publisher_seller">Publisher & Seller</option>
                 <option value="admin">Admins</option>
               </select>
               <i className="ri-filter-3-line absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
@@ -644,6 +672,14 @@ export default function UserManagement() {
                   >
                     <i className={selectedUser.is_active ? 'ri-user-forbid-line text-lg' : 'ri-user-follow-line text-lg'}></i>
                     {selectedUser.is_active ? 'Suspend Account' : 'Activate Account'}
+                  </button>
+
+                  <button
+                    onClick={() => handleHideAllProducts(selectedUser.id)}
+                    className="flex items-center justify-center gap-3 p-5 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 transition-all font-bold text-xs uppercase tracking-widest active:scale-95"
+                  >
+                    <i className="ri-eye-off-line text-lg"></i>
+                    Hide products
                   </button>
 
                   <button

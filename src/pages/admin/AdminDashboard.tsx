@@ -179,20 +179,21 @@ export default function AdminDashboard() {
     try {
       if (!isBackground) console.log('📊 Fetching dashboard data...');
 
-      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes] = await Promise.all([
-        supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(100),
+      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes] = await Promise.all([
+        supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(50),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('seller_profiles').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).in('role', ['admin', 'super_admin']),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'news_publisher'),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).in('role', ['news_publisher', 'publisher_seller']),
         supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('category', 'product'),
         supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('category', 'service'),
         supabase.from('campus_news').select('id', { count: 'exact', head: true }).eq('is_published', true),
         supabase.from('support_tickets').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress']),
         supabase.from('activity_logs').select('*, user:profiles!user_id(full_name)').order('created_at', { ascending: false }).limit(20),
-        supabase.from('profiles').select('faculty, department, created_at'),
-        supabase.from('products').select('*, seller:profiles!products_seller_id_fkey(full_name, email, phone)').order('created_at', { ascending: false }).limit(200),
-        supabase.from('website_settings').select('enable_sms').single()
+        supabase.from('profiles').select('faculty, department, created_at').order('created_at', { ascending: false }).limit(1000),
+        supabase.from('products').select('*, seller:profiles!products_seller_id_fkey(full_name, email, phone)').order('created_at', { ascending: false }).limit(50),
+        supabase.from('website_settings').select('enable_sms').single(),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'buyer')
       ]);
 
       if (logsRes.data) setRecentLogs(logsRes.data);
@@ -201,11 +202,13 @@ export default function AdminDashboard() {
         setAllProducts(allProductsRes.data as any || []);
       }
 
-      // Handle Applications
+      // Handle Applications - Robust Error Handling
       let fetchedApps = appsRes.data || [];
       if (appsRes.error) {
-        if (!isBackground) console.warn('Applications fetch error, defaulting to empty:', appsRes.error);
-        fetchedApps = [];
+        console.error('Applications fetch error:', appsRes.error);
+        // Fallback: If join fails, try fetching without profile join
+        const { data: simpleApps } = await supabase.from('seller_applications').select('*').order('created_at', { ascending: false }).limit(50);
+        fetchedApps = simpleApps || [];
       }
       setApplications(fetchedApps as any);
 
@@ -221,7 +224,7 @@ export default function AdminDashboard() {
         sellers: sellersRes.count || 0,
         admins: adminsRes.count || 0,
         publishers: publishersRes.count || 0,
-        buyers: totalUsers - (sellersRes.count || 0) - (adminsRes.count || 0) - (publishersRes.count || 0),
+        buyers: buyersRes.count || 0,
         products_count: productsCountRes.count || 0,
         services_count: servicesCountRes.count || 0,
         pending: pendingCount,
@@ -302,6 +305,16 @@ export default function AdminDashboard() {
     return await supabase.from('profiles').update(updates).eq('id', targetId);
   };
 
+  const adminHideAllProducts = async (targetUserId: string) => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+    if (isBypass && secret) {
+      const { error } = await supabase.rpc('admin_hide_all_products', { target_user_id: targetUserId, secret_key: secret });
+      return { error };
+    }
+    return await supabase.from('products').update({ is_active: false }).eq('seller_id', targetUserId);
+  };
+
   const adminUpdateApplication = async (appId: string, status: string) => {
     const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     const secret = localStorage.getItem('sys_admin_secret');
@@ -312,29 +325,47 @@ export default function AdminDashboard() {
     return await supabase.from('seller_applications').update({ status, updated_at: new Date().toISOString() }).eq('id', appId);
   };
 
-  const adminUpsertSellerProfile = async (targetUserId: string, businessName: string) => {
+  const adminUpsertSellerProfile = async (targetUserId: string, businessName: string, businessCategory: string) => {
     const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     const secret = localStorage.getItem('sys_admin_secret');
     if (isBypass && secret) {
-      const { error } = await supabase.rpc('admin_upsert_seller_profile', { target_user_id: targetUserId, initial_name: businessName, secret_key: secret });
+      const { error } = await supabase.rpc('admin_upsert_seller_profile', {
+        target_user_id: targetUserId,
+        initial_name: businessName,
+        category: businessCategory,
+        secret_key: secret
+      });
       return { error };
     }
-    return await supabase.from('seller_profiles').upsert({ user_id: targetUserId, business_name: businessName, created_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    return await supabase.from('seller_profiles').upsert({
+      user_id: targetUserId,
+      business_name: businessName,
+      business_category: businessCategory,
+      created_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
   };
 
-  const handleApprove = async (applicationId: string, userId: string) => {
+  const handleApprove = async (applicationId: string, userId: string, businessName: string, businessCategory: string) => {
     setProcessing(applicationId);
     try {
       // 1. Approve Application
       const { error: appError } = await adminUpdateApplication(applicationId, 'approved');
       if (appError) throw appError;
 
-      // 2. Grant Seller Role
-      const { error: profileError } = await adminUpdateProfile(userId, { role: 'seller' });
+      // 2. Grant Seller Role (Smart Role Transition)
+      const { data: currentProfile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+      let newRole = 'seller';
+      if (currentProfile?.role === 'news_publisher') {
+        newRole = 'publisher_seller';
+      } else if (currentProfile?.role === 'admin' || currentProfile?.role === 'super_admin') {
+        newRole = currentProfile.role; // Admins keep their higher-level role
+      }
+
+      const { error: profileError } = await adminUpdateProfile(userId, { role: newRole });
       if (profileError) throw profileError;
 
       // 3. Create Seller Profile Entry (if it doesn't exist)
-      const { error: sellerProfileError } = await adminUpsertSellerProfile(userId, 'New Business');
+      const { error: sellerProfileError } = await adminUpsertSellerProfile(userId, businessName || 'New Business', businessCategory || 'General');
       if (sellerProfileError) throw sellerProfileError;
 
       // 4. Send Notification
@@ -536,6 +567,13 @@ export default function AdminDashboard() {
             <p className="text-slate-500 text-sm mt-1">Last updated: {lastUpdate.toLocaleTimeString()}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/profile"
+              className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 rounded-xl font-bold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2"
+            >
+              <i className="ri-user-smile-line text-blue-500"></i>
+              My Profile
+            </Link>
             <button
               onClick={() => setShowAddAdminModal(true)}
               className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold border border-slate-700 transition-all flex items-center gap-2"
@@ -791,6 +829,52 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-6">
+                {/* Real-time Seller Applications Feed */}
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <h4 className="text-sm font-black text-white uppercase tracking-wider">Live Seller Applications</h4>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('applications')}
+                      className="text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-widest"
+                    >
+                      View All Tracking →
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {pendingApps.length > 0 ? (
+                      pendingApps.slice(0, 3).map((app) => (
+                        <div key={app.id} className="group flex items-center gap-4 p-4 bg-slate-900/50 rounded-xl border border-white/5 hover:border-blue-500/30 transition-all">
+                          <div className="w-12 h-12 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400 font-black text-lg">
+                            {app.user?.full_name?.charAt(0) || 'U'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-white truncate">{app.business_name}</p>
+                              <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-[8px] font-black uppercase rounded">New</span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 truncate">Applied by {app.user?.full_name}</p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab('applications')}
+                            className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-emerald-500 hover:text-white transition-all"
+                          >
+                            <i className="ri-arrow-right-line"></i>
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-slate-500 border border-dashed border-slate-700/50 rounded-xl">
+                        <i className="ri-checkbox-circle-line text-2xl mb-2 block text-emerald-500/50"></i>
+                        <p className="text-xs font-medium">All applications processed!</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
                   <h4 className="text-sm font-black text-white uppercase tracking-wider mb-6">System Status</h4>
                   <div className="space-y-4">
@@ -820,7 +904,7 @@ export default function AdminDashboard() {
                           <i className="ri-flashlight-line text-xs"></i>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-300 truncate">{log.action_type?.replace(/_/g, ' ')}</p>
+                          <p className="text-xs font-bold text-slate-300 truncate">{log.action_type?.split('_').join(' ')}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">{new Date(log.created_at).toLocaleTimeString()}</p>
                         </div>
                       </div>
@@ -935,24 +1019,33 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><i className="ri-phone-line text-blue-400"></i>{app.contact_phone}</div>
                       </div>
                     </div>
-                    {app.status === 'pending' && (
-                      <div className="flex gap-3 w-full xl:w-auto">
-                        <button
-                          onClick={() => handleApprove(app.id, app.user_id)}
-                          disabled={!!processing}
-                          className="flex-1 xl:px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                        >
-                          {processing === app.id ? <i className="ri-loader-4-line animate-spin"></i> : 'Approve'}
-                        </button>
-                        <button
-                          onClick={() => handleReject(app.id)}
-                          disabled={!!processing}
-                          className="flex-1 xl:px-8 py-4 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                      <button
+                        onClick={() => handleApprove(app.id, app.user_id, app.business_name, app.business_category)}
+                        disabled={!!processing}
+                        className="flex-1 xl:px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                      >
+                        {processing === app.id ? <i className="ri-loader-4-line animate-spin"></i> : 'Approve'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (confirm('Hide all existing products for this user?')) {
+                            await adminHideAllProducts(app.user_id);
+                            alert('Products hidden');
+                          }
+                        }}
+                        className="flex-1 xl:px-6 py-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-2xl font-black text-xs uppercase tracking-wider transition-all"
+                      >
+                        Hide Products
+                      </button>
+                      <button
+                        onClick={() => handleReject(app.id)}
+                        disabled={!!processing}
+                        className="flex-1 xl:px-8 py-4 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -1026,7 +1119,7 @@ export default function AdminDashboard() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }: { name: string, percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
@@ -1094,7 +1187,7 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-8 py-6">
                           <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            {log.action_type?.replace(/_/g, ' ')}
+                            {log.action_type?.split('_').join(' ')}
                           </span>
                         </td>
                         <td className="px-8 py-6">
@@ -1110,77 +1203,76 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
-      </div >
-
-      {/* Access Manager Modal */}
-      {
-        showAddAdminModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
-              <div className="text-center mb-10">
-                <div className="w-20 h-20 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 text-4xl">
-                  <i className="ri-shield-user-line"></i>
-                </div>
-                <h2 className="text-3xl font-black text-white uppercase tracking-tight">Access Control</h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">Elevate user privileges</p>
-              </div>
-
-              <div className="space-y-6">
-                <div className="relative">
-                  <i className="ri-search-line absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-lg"></i>
-                  <input
-                    type="text"
-                    placeholder="Search by name or email..."
-                    value={adminSearchTerm}
-                    onChange={(e) => handleSearchUsers(e.target.value)}
-                    className="w-full pl-14 pr-6 py-5 rounded-3xl bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-sm text-white placeholder-slate-500"
-                  />
-                </div>
-
-                {adminSearchResults.length > 0 && !selectedAdminUser && (
-                  <div className="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700">
-                    {adminSearchResults.map(u => (
-                      <button
-                        key={u.id}
-                        onClick={() => setSelectedAdminUser(u)}
-                        className="w-full flex items-center gap-4 p-5 hover:bg-slate-700 transition-all text-left border-b border-slate-700 last:border-0"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-black">{u.full_name.charAt(0)}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-black text-white truncate">{u.full_name}</div>
-                          <div className="text-[10px] font-bold text-slate-400 uppercase">{u.role}</div>
-                        </div>
-                      </button>
-                    ))}
+        {/* Access Manager Modal */}
+        {
+          showAddAdminModal && (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="text-center mb-10">
+                  <div className="w-20 h-20 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 text-4xl">
+                    <i className="ri-shield-user-line"></i>
                   </div>
-                )}
+                  <h2 className="text-3xl font-black text-white uppercase tracking-tight">Access Control</h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">Elevate user privileges</p>
+                </div>
 
-                {selectedAdminUser && (
-                  <div className="p-6 bg-blue-600 rounded-3xl text-white flex items-center gap-4 animate-in zoom-in-95 shadow-xl">
-                    <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center font-black text-xl">{selectedAdminUser.full_name.charAt(0)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-black uppercase opacity-60">Selected</div>
-                      <div className="font-black truncate">{selectedAdminUser.full_name}</div>
+                <div className="space-y-6">
+                  <div className="relative">
+                    <i className="ri-search-line absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-lg"></i>
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={adminSearchTerm}
+                      onChange={(e) => handleSearchUsers(e.target.value)}
+                      className="w-full pl-14 pr-6 py-5 rounded-3xl bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-sm text-white placeholder-slate-500"
+                    />
+                  </div>
+
+                  {adminSearchResults.length > 0 && !selectedAdminUser && (
+                    <div className="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700">
+                      {adminSearchResults.map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => setSelectedAdminUser(u)}
+                          className="w-full flex items-center gap-4 p-5 hover:bg-slate-700 transition-all text-left border-b border-slate-700 last:border-0"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-black">{u.full_name.charAt(0)}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-black text-white truncate">{u.full_name}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase">{u.role}</div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                    <button onClick={() => setSelectedAdminUser(null)} className="p-2 hover:scale-110 transition-transform"><i className="ri-close-circle-fill text-2xl"></i></button>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              <div className="grid grid-cols-2 gap-4 mt-10">
-                <button onClick={() => setShowAddAdminModal(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-300 font-black text-[10px] uppercase tracking-wider hover:bg-slate-700 transition-all">Cancel</button>
-                <button
-                  onClick={handleAddAdmin}
-                  disabled={!selectedAdminUser || processing === 'add-admin'}
-                  className="py-5 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-wider hover:bg-blue-700 transition-all disabled:opacity-50"
-                >
-                  {processing === 'add-admin' ? 'Processing...' : 'Confirm'}
-                </button>
+                  {selectedAdminUser && (
+                    <div className="p-6 bg-blue-600 rounded-3xl text-white flex items-center gap-4 animate-in zoom-in-95 shadow-xl">
+                      <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center font-black text-xl">{selectedAdminUser.full_name.charAt(0)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-black uppercase opacity-60">Selected</div>
+                        <div className="font-black truncate">{selectedAdminUser.full_name}</div>
+                      </div>
+                      <button onClick={() => setSelectedAdminUser(null)} className="p-2 hover:scale-110 transition-transform"><i className="ri-close-circle-fill text-2xl"></i></button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-10">
+                  <button onClick={() => setShowAddAdminModal(false)} className="py-5 rounded-2xl bg-slate-800 text-slate-300 font-black text-[10px] uppercase tracking-wider hover:bg-slate-700 transition-all">Cancel</button>
+                  <button
+                    onClick={handleAddAdmin}
+                    disabled={!selectedAdminUser || processing === 'add-admin'}
+                    className="py-5 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-wider hover:bg-blue-700 transition-all disabled:opacity-50"
+                  >
+                    {processing === 'add-admin' ? 'Processing...' : 'Confirm'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )
-      }
-    </div >
+          )
+        }
+      </div>
+    </div>
   );
 }

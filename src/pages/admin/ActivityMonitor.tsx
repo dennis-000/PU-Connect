@@ -190,7 +190,7 @@ export default function ActivityMonitor() {
                     </div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${getActionColor(activity.action_type)} bg-opacity-20`}>
-                        {activity.action_type.replace(/_/g, ' ')}
+                        {activity.action_type.split('_').join(' ')}
                       </span>
                     </div>
                     {activity.action_details && (

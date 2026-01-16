@@ -107,7 +107,7 @@ const routes: RouteObject[] = [
   {
     path: '/seller/dashboard',
     element: (
-      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin']}>
+      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin', 'publisher_seller']}>
         <SellerDashboard />
       </ProtectedRoute>
     ),
@@ -115,7 +115,7 @@ const routes: RouteObject[] = [
   {
     path: '/seller/add-product',
     element: (
-      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin']}>
+      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin', 'publisher_seller']}>
         <AddProduct />
       </ProtectedRoute>
     ),
@@ -123,7 +123,7 @@ const routes: RouteObject[] = [
   {
     path: '/seller/edit-product/:id',
     element: (
-      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin']}>
+      <ProtectedRoute allowedRoles={['seller', 'admin', 'super_admin', 'publisher_seller']}>
         <EditProduct />
       </ProtectedRoute>
     ),
@@ -160,7 +160,7 @@ const routes: RouteObject[] = [
   {
     path: '/admin/news',
     element: (
-      <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+      <ProtectedRoute allowedRoles={['admin', 'super_admin', 'news_publisher', 'publisher_seller']}>
         <NewsManagement />
       </ProtectedRoute>
     ),
@@ -184,7 +184,7 @@ const routes: RouteObject[] = [
   {
     path: '/admin/ads',
     element: (
-      <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+      <ProtectedRoute allowedRoles={['admin', 'super_admin', 'news_publisher', 'publisher_seller']}>
         <AdsManagement />
       </ProtectedRoute>
     ),

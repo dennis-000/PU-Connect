@@ -40,23 +40,16 @@ export default function Login() {
 
       const { user } = await signIn(email, password);
 
-      // Fetch profile to determine role-based redirect
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
+      // We don't need to fetch profile here again, signIn() already updated the profile state 
+      // but to be safe and get the immediate value for navigation:
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single();
 
-        if (profile?.role === 'admin') {
-          navigate('/admin');
-        } else if (profile?.role === 'news_publisher') {
-          navigate('/publisher');
-        } else if (profile?.role === 'seller') {
-          navigate('/seller/dashboard');
-        } else {
-          navigate('/marketplace');
-        }
+      if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+        navigate('/admin/dashboard');
+      } else if (profile?.role === 'news_publisher') {
+        navigate('/publisher');
+      } else if (profile?.role === 'seller') {
+        navigate('/seller/dashboard');
       } else {
         navigate('/marketplace');
       }

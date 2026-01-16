@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } as any; /* casting to any to satisfy User type constraints safely */
 
             const mockProfile: Profile = {
-              id: 'sys_admin_001',
+              id: '00000000-0000-0000-0000-000000000000',
               email: 'system.admin@gmail.com',
               full_name: 'System Administrator',
               role: 'super_admin',
@@ -320,7 +320,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (sysBypass === 'true') {
         // Force mock admin state
         const mockUser = {
-          id: 'sys_admin_001',
+          id: '00000000-0000-0000-0000-000000000000',
           app_metadata: {},
           user_metadata: { full_name: 'System Administrator' },
           aud: 'authenticated',
@@ -328,7 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } as any;
 
         const mockProfile: Profile = {
-          id: 'sys_admin_001',
+          id: '00000000-0000-0000-0000-000000000000',
           email: 'system.admin@gmail.com',
           full_name: 'System Administrator',
           role: 'super_admin',

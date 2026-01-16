@@ -53,7 +53,7 @@ export default function SellerDashboard() {
     views: products.reduce((sum, p) => sum + (p.views_count || 0), 0)
   };
 
-  if (!user || (!['seller', 'admin', 'super_admin'].includes(profile?.role || ''))) {
+  if (!user || (!['seller', 'admin', 'super_admin', 'publisher_seller'].includes(profile?.role || ''))) {
     navigate('/marketplace');
     return null;
   }
@@ -147,6 +147,13 @@ export default function SellerDashboard() {
           </div>
 
           <div className="flex flex-col gap-3">
+            <Link
+              to="/profile"
+              className="px-10 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-widest rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
+              <i className="ri-user-smile-line text-lg text-blue-500"></i>
+              <span>My Profile</span>
+            </Link>
             <Link
               to="/seller/add-product"
               className="group px-10 py-5 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-lg shadow-blue-500/20"
