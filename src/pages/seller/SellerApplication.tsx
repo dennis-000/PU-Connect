@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import Navbar from '../../components/feature/Navbar';
+import ImageUploader from '../../components/base/ImageUploader';
 
 export default function SellerApplication() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
   const [formData, setFormData] = useState({
     businessName: '',
     businessCategory: '',
@@ -15,6 +17,7 @@ export default function SellerApplication() {
     contactPhone: '',
     whatsappNumber: '',
     contactEmail: user?.email || '',
+    businessLogo: '',
   });
 
   const categories = [
@@ -30,12 +33,34 @@ export default function SellerApplication() {
     'Other'
   ];
 
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  useEffect(() => {
+    if (authLoading) return; // Wait for auth to initialize
+
+    if (!user) {
+      // Only redirect if absolutely sure user is not logged in and auth finished loading
+      setNotification({ type: 'error', message: 'Please login to apply as a seller' });
+      const t = setTimeout(() => navigate('/login'), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [user, authLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      alert('Please login to apply as a seller');
-      navigate('/login');
+    if (!user) return;
+
+    // Check if user is already a seller
+    if (profile?.role === 'seller') {
+      setNotification({ type: 'warning', message: 'You are already a seller! You cannot apply again.' });
+      setTimeout(() => navigate('/seller/dashboard'), 2000);
       return;
     }
 
@@ -51,12 +76,15 @@ export default function SellerApplication() {
 
       if (existingApp) {
         if (existingApp.status === 'approved') {
-          alert('You already have an active Seller Account. You are limited to one shop per user.');
-          navigate('/seller/dashboard');
+          setNotification({ type: 'warning', message: 'You already have an active Seller Account. You are limited to one shop per user.' });
+          setTimeout(() => navigate('/seller/dashboard'), 2000);
+        } else if (existingApp.status === 'pending') {
+          setNotification({ type: 'info', message: 'You already have a pending application. Please wait for admin approval.' });
+          setTimeout(() => navigate('/seller/status'), 2000);
         } else {
-          alert('You already have a pending seller application. Please wait for the admin to approve your request.');
-          navigate('/seller/status');
+          setNotification({ type: 'warning', message: 'You have a previous application. Please contact support.' });
         }
+        setLoading(false);
         return;
       }
 
@@ -71,13 +99,14 @@ export default function SellerApplication() {
             business_description: `${formData.businessDescription}\n\n[WhatsApp Contact: ${formData.whatsappNumber}]`,
             contact_phone: formData.contactPhone,
             contact_email: formData.contactEmail,
+            business_logo: formData.businessLogo,
             status: 'pending'
           }
         ]);
 
       if (error) throw error;
 
-      // Notify Admins via SMS
+      // Notify Admins
       try {
         const { data: admins } = await supabase
           .from('profiles')
@@ -86,10 +115,9 @@ export default function SellerApplication() {
           .not('phone', 'is', null);
 
         if (admins && admins.length > 0) {
-          const adminPhones = admins.map(a => a.phone).filter(p => p && p.length > 9); // Basic validation
+          const adminPhones = admins.map(a => a.phone).filter(p => p && p.length > 9);
           if (adminPhones.length > 0) {
             import('../../lib/arkesel').then(({ sendSMS }) => {
-              // Send mostly to unique numbers to save cost/avoid spam if duplicate admins
               const uniquePhones = [...new Set(adminPhones)];
               sendSMS(uniquePhones, `New Seller Application: ${formData.businessName} has applied to become a seller. Please check the Admin Portal for review.`)
                 .catch(err => console.error('Failed to notify admins:', err));
@@ -100,11 +128,12 @@ export default function SellerApplication() {
         console.error('Error fetching admins for notification:', notifyError);
       }
 
-      alert('Application submitted successfully! Redirecting to status page...');
-      navigate('/seller/status');
+
+      setNotification({ type: 'success', message: '✅ Application submitted successfully! Redirecting to status page...' });
+      setTimeout(() => navigate('/seller/status'), 2000);
     } catch (error: any) {
       console.error('Error submitting application:', error);
-      alert('Failed to submit application. Please try again.');
+      setNotification({ type: 'error', message: error.message || 'Failed to submit application. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -113,6 +142,28 @@ export default function SellerApplication() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
       <Navbar />
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-right fade-in duration-300">
+          <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-bold backdrop-blur-xl border max-w-md ${notification.type === 'success' ? 'bg-emerald-600/90 border-emerald-500/50' :
+            notification.type === 'error' ? 'bg-rose-600/90 border-rose-500/50' :
+              notification.type === 'warning' ? 'bg-amber-600/90 border-amber-500/50' :
+                'bg-blue-600/90 border-blue-500/50'
+            }`}>
+            <i className={`text-2xl ${notification.type === 'success' ? 'ri-checkbox-circle-line' :
+              notification.type === 'error' ? 'ri-error-warning-line' :
+                notification.type === 'warning' ? 'ri-alert-line' :
+                  'ri-information-line'
+              }`}></i>
+            <p className="flex-1">{notification.message}</p>
+            <button onClick={() => setNotification(null)} className="hover:opacity-70 transition-opacity">
+              <i className="ri-close-line text-xl"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
           <div className="text-center md:text-left">
@@ -144,7 +195,7 @@ export default function SellerApplication() {
                 {[
                   { label: 'Registration Fee', value: 'GH₵ 50 / Mo', desc: 'Secure platform listing rights' },
                   { label: 'Validity Period', value: '30 Days', desc: 'Renewable monthly cycle' },
-                  { label: 'Product Limit', value: 'Unlimited', desc: 'No restrictions on listings' },
+                  { label: 'Review Time', value: '24 Hours', desc: 'Application processing time' },
                   { label: 'Verification', value: 'Required', desc: 'Official student status' }
                 ].map((item, i) => (
                   <li key={i} className="group">
@@ -169,6 +220,25 @@ export default function SellerApplication() {
           <div className="lg:col-span-8 animate-slide-in-right delay-200">
             <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl shadow-gray-200/40 dark:shadow-none border border-gray-100 dark:border-gray-800 p-8 md:p-12 transition-colors duration-300">
               <form onSubmit={handleSubmit} className="space-y-10">
+                <div className="space-y-4">
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
+                    Business Logo
+                  </label>
+                  <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 flex-shrink-0">
+                      <ImageUploader
+                        folder="profiles"
+                        onImageUploaded={(url) => setFormData({ ...formData, businessLogo: url })}
+                        className="w-full h-full rounded-2xl bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors cursor-pointer flex items-center justify-center"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Upload Logo</p>
+                      <p className="text-xs text-gray-500">Recommended size: 500x500px. <br /> Supports JPG, PNG.</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">

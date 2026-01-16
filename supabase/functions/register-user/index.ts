@@ -1,35 +1,31 @@
-import express from 'express';
-import { createClient } from '@supabase/supabase-js';
-import bodyParser from 'body-parser';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 
-const app = express();
-app.use(bodyParser.json());
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
-  next();
-});
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-app.options('*', (req, res) => {
-  res.send('ok');
-});
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
-app.post('/register-user', async (req, res) => {
   try {
-    const { email, password, fullName, studentId, department, faculty, phone } = req.body;
+    const { email, password, fullName, studentId, department, faculty, phone } = await req.json()
 
     // Validate required fields
     if (!email || !password || !fullName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email, password, and full name are required'
+      return new Response(JSON.stringify({ error: 'Email, password, and full name are required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Create Supabase admin client
     const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         auth: {
           autoRefreshToken: false,
@@ -53,24 +49,20 @@ app.post('/register-user', async (req, res) => {
     })
 
     if (authError) {
-      console.error('Auth error:', authError)
-      return res.status(400).json({
-        success: false,
-        error: authError.message || 'Failed to create user account'
+      return new Response(JSON.stringify({ error: authError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (!authData.user) {
-      return res.status(400).json({
-        success: false,
-        error: 'Failed to create user account'
+      return new Response(JSON.stringify({ error: 'Failed to create user account' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Step 2: Wait a moment for auth to propagate
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Step 3: Create the profile using upsert to avoid conflicts
+    // Step 2: Create the profile
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -90,31 +82,28 @@ app.post('/register-user', async (req, res) => {
       })
 
     if (profileError) {
-      console.error('Profile error:', profileError)
-      // If profile creation fails, delete the auth user to keep things clean
+      // If profile creation fails, delete the auth user
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      return res.status(400).json({
-        success: false,
-        error: `Database error: ${profileError.message}`
+      return new Response(JSON.stringify({ error: `Database error: ${profileError.message}` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       message: 'Account created successfully',
       userId: authData.user.id
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Registration error:', error)
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
-    });
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+})

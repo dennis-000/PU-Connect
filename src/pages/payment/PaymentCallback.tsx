@@ -37,12 +37,18 @@ export default function PaymentCallback() {
 
       if (data.success) {
         setStatus('success');
-        setMessage('Payment successful! Your seller account is now active.');
 
-        // Update local profile
-        setTimeout(() => {
-          window.location.href = '/seller/dashboard';
-        }, 3000);
+        if (data.type === 'sms_topup') {
+          setMessage(`Payment successful! ${data.units} SMS units have been added to your record.`);
+          setTimeout(() => {
+            navigate('/admin/sms');
+          }, 3000);
+        } else {
+          setMessage('Payment successful! Your seller account is now active.');
+          setTimeout(() => {
+            navigate('/seller/dashboard');
+          }, 3000);
+        }
       } else {
         setStatus('failed');
         setMessage('Payment verification failed. Please contact support.');

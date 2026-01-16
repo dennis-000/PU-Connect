@@ -36,7 +36,7 @@ export default function SellerApplications() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
       navigate('/');
       return;
     }
@@ -91,11 +91,19 @@ export default function SellerApplications() {
 
     setProcessing(true);
     try {
+      // Check if admin ID is a valid UUID (system admin has text ID)
+      // If we are the system admin (or any non-UUID), we pass null to reviewed_by
+      // because the column is UUID type.
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile?.id || '');
+      const reviewedBy = isValidUUID ? profile?.id : null;
+
       // Update application status
       const { error: appError } = await supabase
         .from('seller_applications')
         .update({
           status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: reviewedBy,
           updated_at: new Date().toISOString()
         })
         .eq('id', application.id);
@@ -218,7 +226,7 @@ export default function SellerApplications() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-300">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">

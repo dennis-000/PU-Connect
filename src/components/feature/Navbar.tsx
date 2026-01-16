@@ -15,6 +15,37 @@ export default function Navbar() {
   const [hasApplication, setHasApplication] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Realtime Presence Tracking
+  useEffect(() => {
+    if (!user || !profile) return;
+
+    const channel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: user.id,
+        },
+      },
+    });
+
+    channel.on('presence', { event: 'sync' }, () => {
+      // Just syncing state, no local action needed in Navbar
+    }).subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        const presenceState = {
+          user_id: user.id,
+          full_name: profile.full_name,
+          role: profile.role,
+          online_at: new Date().toISOString(),
+        };
+        await channel.track(presenceState);
+      }
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user, profile]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -98,25 +129,21 @@ export default function Navbar() {
   const dashboardItem = getDashboardItem();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
-      <div className="absolute inset-0 bg-white/70 dark:bg-gray-950/70 backdrop-blur-md border-b border-gray-100/30 dark:border-gray-800/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
-        {/* Adds a subtle noise texture to the glass for realism */}
-        <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc0JyBoZWlnaHQ9JzQnPgo8cmVjdCB3aWR0aD0nNCcgaGVpZ2h0PSc0JyBmaWxsPScjZmZmJy8+CjxyZWN0IHdpZHRoMScxJyBoZWlnaHQ9JzEnIGZpbGw9JyM4ODgnLz4KPC9zdmc+')]"></div>
-      </div>
+    <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+      <div className="absolute inset-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 relative">
-        <div className="flex justify-between items-center h-16 md:h-20">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative">
+        <div className="flex justify-between items-center h-20">
           {/* Logo Section */}
-          <Link to="/" className="flex items-center gap-3 group relative z-10 transition-transform active:scale-95">
-            {/* Logo Image - Enhanced Size */}
-            <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
+          <Link to="/" className="flex items-center gap-2 group relative z-10">
+            <div className="h-8 w-auto md:h-10 flex items-center justify-center">
               <img
                 src="/PU%20Connect%20logo.png"
                 alt="PU Connect"
-                className="w-full h-full object-contain drop-shadow-sm"
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement?.classList.add('bg-blue-600', 'rounded-xl', 'text-white');
+                  e.currentTarget.parentElement?.classList.add('bg-blue-600', 'rounded-xl', 'text-white', 'p-2');
                   e.currentTarget.parentElement!.innerHTML = '<i class="ri-store-3-fill text-2xl"></i>';
                 }}
               />
@@ -124,150 +151,149 @@ export default function Navbar() {
           </Link>
 
           {/* Right Side Actions (Nav + Auth) */}
-          <div className="flex items-center gap-8 md:gap-12">
+          <div className="flex items-center gap-6">
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center space-x-8">
+            <div className="hidden lg:flex items-center space-x-6">
+              <Link
+                to="/"
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition-colors"
+              >
+                Home
+              </Link>
               <Link
                 to="/marketplace"
-                className="group flex items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all tracking-wide uppercase relative py-1"
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition-colors"
               >
-                <i className="ri-compass-3-line text-lg group-hover:text-blue-600 transition-colors"></i>
                 Marketplace
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link
                 to="/news"
-                className="group flex items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all tracking-wide uppercase relative py-1"
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition-colors"
               >
-                <i className="ri-newspaper-line text-lg group-hover:text-blue-600 transition-colors"></i>
-                Campus News
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
-              </Link>
-              <Link
-                to="/internships"
-                className="group flex items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all tracking-wide uppercase relative py-1"
-              >
-                <i className="ri-briefcase-line text-lg group-hover:text-blue-600 transition-colors"></i>
-                Internships
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
+                News
               </Link>
               <Link
                 to="/support"
-                className="group flex items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all tracking-wide uppercase relative py-1"
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition-colors"
               >
-                <i className="ri-customer-service-2-line text-lg group-hover:text-blue-600 transition-colors"></i>
                 Help Center
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
               </Link>
-              <Link
-                to="/seller/apply"
-                className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-95 transition-all"
-              >
-                <i className="ri-store-2-line text-lg"></i>
-                Become a Seller
-              </Link>
+              <div className="w-px h-6 bg-gray-200 dark:bg-gray-800 mx-2"></div>
+              {profile?.role === 'seller' || profile?.role === 'admin' || profile?.role === 'super_admin' ? (
+                <Link
+                  to="/seller/dashboard"
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <i className="ri-dashboard-line text-lg"></i>
+                  Seller Dashboard
+                </Link>
+              ) : (
+                <Link
+                  to="/seller/apply"
+                  className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <i className="ri-store-2-line text-lg"></i>
+                  Become a Seller
+                </Link>
+              )}
             </div>
 
             {/* Auth/User Section */}
-            <div className="flex items-center gap-4 md:gap-6 relative z-10">
+            <div className="flex items-center gap-4 relative z-10 pl-6 border-l border-gray-200 dark:border-gray-800">
               {/* Dark Mode Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-2 rounded-full text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 title="Toggle Theme"
               >
                 {theme === 'dark' ? (
-                  <i className="ri-sun-line text-xl text-yellow-400"></i>
+                  <i className="ri-sun-line text-xl"></i>
                 ) : (
-                  <i className="ri-moon-line text-xl text-gray-600 dark:text-gray-400"></i>
+                  <i className="ri-moon-line text-xl"></i>
                 )}
               </button>
 
-              {user && (
-                <div className="hidden lg:flex" />
-              )}
-
               {user ? (
-                <div className="flex items-center gap-4 md:gap-6">
-                  {/* ... user controls ... */}
-                  <Link to="/messages" className="hidden lg:flex relative group p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
-                    <i className="ri-chat-3-line text-xl md:text-2xl text-gray-900 dark:text-white group-hover:text-blue-600"></i>
+                <div className="flex items-center gap-4">
+                  <Link to="/messages" className="relative p-2 text-gray-400 hover:text-blue-600 dark:hover:text-white transition-colors">
+                    <i className="ri-chat-3-line text-xl"></i>
                     {unreadCount > 0 && (
-                      <span className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full ring-4 ring-white dark:ring-gray-900"></span>
+                      <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white dark:ring-gray-900"></span>
                     )}
                   </Link>
 
-
-
-                  {/* Profile Dropdown - Hidden on Mobile to fix responsiveness */}
-                  <div className="relative hidden lg:block" ref={dropdownRef}>
+                  {/* Profile Dropdown */}
+                  <div className="relative" ref={dropdownRef}>
                     <button
                       onClick={() => setShowDropdown(!showDropdown)}
-                      className="flex items-center gap-3 p-1.5 pr-4 bg-gray-50 dark:bg-white/5 rounded-full hover:bg-white dark:hover:bg-gray-800 hover:shadow-xl transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-700 cursor-pointer"
+                      className="flex items-center gap-2"
                     >
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-800 shadow-lg">
+                      <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">
                         <img
                           src={getOptimizedImageUrl(profile?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200", 80, 80)}
                           alt=""
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <i className={`ri-arrow-down-s-line text-lg text-gray-400 transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`}></i>
                     </button>
 
-                    <div className={`absolute top-full right-0 mt-4 w-60 md:w-72 max-w-[90vw] bg-white dark:bg-gray-900 rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-800 p-3 transition-all duration-300 origin-top-right z-50 ${showDropdown ? 'opacity-100 translate-y-0 visible' : 'opacity-0 translate-y-4 invisible'
-                      }`}>
-                      <div className="p-4 mb-2 border-b border-gray-50 dark:border-gray-800">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">User Account</p>
-                        <p className="text-base font-bold text-gray-900 dark:text-white truncate tracking-tight">{profile?.full_name}</p>
+                    {/* Dropdown Menu */}
+                    <div className={`absolute top-full right-0 mt-3 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/20 dark:shadow-black/40 border border-gray-100 dark:border-gray-800 py-3 transition-all duration-200 origin-top-right z-50 overflow-hidden ${showDropdown ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
+                      <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-800/50 mb-2 bg-gray-50/50 dark:bg-gray-800/30">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{profile?.full_name}</p>
+                        <p className="text-xs text-gray-500 truncate font-medium">{profile?.email}</p>
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="px-2">
                         {[
-                          { label: 'My Settings', path: '/profile', icon: 'ri-user-settings-line' },
-                          // Only spread dashboardItem if it exists
-                          ...(dashboardItem ? [dashboardItem] : []),
-                          { label: 'Help Center', path: '/support', icon: 'ri-customer-service-2-line' },
-                          { label: 'Saved Products', path: '/profile#favorites', icon: 'ri-heart-line' }
+                          { label: 'My Profile', path: '/profile', icon: 'ri-user-smile-line' },
+                          ...(dashboardItem ? [{ ...dashboardItem }] : []),
+                          { label: 'Help Center', path: '/support', icon: 'ri-question-line' }
                         ].map((item) => (
                           <Link
                             key={item.label}
                             to={item.path}
-                            className="flex items-center gap-4 p-4 text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all tracking-tight"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
                             onClick={() => setShowDropdown(false)}
                           >
-                            <i className={`${item.icon} text-xl`}></i>
+                            <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              <i className={`${item.icon} text-lg`}></i>
+                            </div>
                             {item.label}
                           </Link>
                         ))}
+                      </div>
+
+                      <div className="border-t border-gray-50 dark:border-gray-800/50 mt-2 pt-2 px-2">
                         <button
-                          type="button"
                           onClick={() => {
                             setShowDropdown(false);
                             handleSignOut();
                           }}
-                          className="w-full flex items-center gap-4 p-4 text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-all mt-2 cursor-pointer uppercase tracking-wide"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-left group"
                         >
-                          <i className="ri-logout-circle-line text-xl"></i>
-                          Secure Sign Out
+                          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 group-hover:text-red-600 transition-colors">
+                            <i className="ri-logout-box-line text-lg"></i>
+                          </div>
+                          Sign Out
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="hidden lg:flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Link
                     to="/login"
-                    className="px-6 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-all uppercase tracking-wide"
+                    className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white transition-colors"
                   >
-                    Sign In
+                    Log In
                   </Link>
                   <Link
                     to="/register"
-                    className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-bold rounded-lg hover:bg-blue-600 dark:hover:bg-gray-200 shadow-lg shadow-gray-200 dark:shadow-none transition-all active:scale-95 uppercase tracking-wide"
+                    className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
                   >
-                    Register
+                    Sign Up
                   </Link>
                 </div>
               )}
@@ -275,7 +301,7 @@ export default function Navbar() {
               {/* Mobile Toggle */}
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="lg:hidden p-3 bg-gray-50 dark:bg-white/5 rounded-xl text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all cursor-pointer"
+                className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
                 <i className={`ri-${showMobileMenu ? 'close' : 'menu-4'}-line text-2xl`}></i>
               </button>
@@ -297,9 +323,9 @@ export default function Navbar() {
           }`}>
           <div className="space-y-2">
             {/* Mobile Menu Logo */}
-            <div className="flex items-center gap-4 mb-10 pl-2">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40">
-                <img src="/PU%20Connect%20logo.png" alt="PU Connect" className="w-12 h-12 object-contain brightness-0 invert" />
+            <div className="flex items-center gap-4 mb-8 pl-2">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/40">
+                <img src="/PU%20Connect%20logo.png" alt="PU Connect" className="w-8 h-8 object-contain brightness-0 invert" />
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-white tracking-tight">PU Connect</h3>
@@ -312,7 +338,6 @@ export default function Navbar() {
               { label: 'Home Terminal', path: '/', icon: 'ri-home-5-line', color: 'text-blue-400', bg: 'bg-blue-900/20' },
               { label: 'Marketplace', path: '/marketplace', icon: 'ri-compass-3-line', color: 'text-emerald-400', bg: 'bg-emerald-900/20' },
               { label: 'Campus News', path: '/news', icon: 'ri-newspaper-line', color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
-              { label: 'Internships', path: '/internships', icon: 'ri-briefcase-line', color: 'text-purple-400', bg: 'bg-purple-900/20' },
               { label: 'Help Center', path: '/support', icon: 'ri-customer-service-2-line', color: 'text-pink-400', bg: 'bg-pink-900/20' },
               {
                 label: 'Become a Seller',

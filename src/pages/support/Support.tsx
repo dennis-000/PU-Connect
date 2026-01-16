@@ -13,39 +13,35 @@ export default function Support() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!user) {
+            alert('Please login to submit a ticket');
+            return;
+        }
+
         if (!subject || !message) return;
 
         setLoading(true);
         try {
-            // In a real app, this would save to a 'support_tickets' table or send an email
-            // For now, we'll insert into 'messages' table targeting an admin or support bot
-            // Or simply log it if no support table structure exists yet.
+            const { error } = await supabase.from('support_tickets').insert({
+                user_id: user.id,
+                subject,
+                message,
+                status: 'open',
+                priority: 'medium'
+            });
 
-            // Let's assume we want to create a message for admin (pseudo-support)
-            // Since we don't have a specific 'support' table in the schema context provided,
-            // I will create a 'support_tickets' table using SQL or just simulate it for now 
-            // and asking the user to setup the table later. 
-            // OR better, I'll use the 'messages' system if possible, but that requires a receiver ID.
+            if (error) {
+                console.error('Supabase Support Ticket Insert Error:', error);
+                throw error;
+            }
 
-            // For this implementation, let's just simulate the submission and maybe
-            // send to an arbitrary "admin" table or just show success.
-            // A robust solution would be to create a 'support_tickets' table.
-
-            // However, to make it functional without migrations right now:
-            // We will just simulate a delay and show success, assuming the backend catches up later.
-            // Or we can create a `support_requests` table if I have permission.
-            // I will save it to 'messages' targeting the first admin found? No, that's flaky.
-
-            // Let's just create a `support_tickets` table if it doesn't exist? No, user didn't ask for migration.
-            // I will creating a simulated submission and "mailto" link fallback.
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
             setSuccess(true);
             setSubject('');
             setMessage('');
-        } catch (error) {
-            console.error('Error sending support request:', error);
-            alert('Failed to send request. Please try again.');
+        } catch (error: any) {
+            console.error('Error details:', error);
+            alert(`Failed to send request: ${error.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }

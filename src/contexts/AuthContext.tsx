@@ -146,6 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Even if supabase errors (e.g. no session), we want to clear local state
       if (error) console.warn('Supabase signout warning:', error);
 
+      if (user) {
+        import('../lib/logger').then(({ logActivity }) => {
+          logActivity(user.id, 'logout', {});
+        });
+      }
       setUser(null);
       setProfile(null);
     } catch (err: any) {
@@ -237,9 +242,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
 
-      // check bypass again
+      // check bypass again - CRITICAL FIX for infinite loop/loading
       const sysBypass = localStorage.getItem('sys_admin_bypass');
-      if (sysBypass === 'true') return; // Ignore supabase updates if in bypass mode
+      if (sysBypass === 'true') {
+        // Ensure state is set for bypass user if not already (redundancy)
+        if (!user || user.id !== 'sys_admin_001') {
+          const mockUser = {
+            id: 'sys_admin_001',
+            app_metadata: {},
+            user_metadata: { full_name: 'System Administrator' },
+            aud: 'authenticated',
+            created_at: new Date().toISOString()
+          } as any;
+
+          const mockProfile: Profile = {
+            id: 'sys_admin_001',
+            email: 'system.admin@gmail.com',
+            full_name: 'System Administrator',
+            role: 'super_admin',
+            student_id: 'SYS-001',
+            department: 'IT',
+            faculty: 'Systems',
+            phone: '0000000000',
+            is_active: true,
+            is_online: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          setUser(mockUser);
+          setProfile(mockProfile);
+        }
+        return;
+      }
 
       if (session?.user) {
         setUser(session.user);
@@ -293,6 +327,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      if (data.user) {
+        import('../lib/logger').then(({ logActivity }) => {
+          logActivity(data.user.id, 'login', { method: 'password', email });
+        });
+      }
       return data;
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
@@ -323,6 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             faculty,
             phone,
           },
+          emailRedirectTo: window.location.origin,
         },
       });
 
