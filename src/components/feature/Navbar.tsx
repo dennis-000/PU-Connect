@@ -130,17 +130,20 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-      <div className="absolute inset-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm"></div>
+      <div className={`absolute inset-0 transition-colors duration-500 ${showMobileMenu
+        ? 'bg-transparent'
+        : 'bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm'
+        }`}></div>
 
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative z-[60]">
         <div className="flex justify-between items-center h-20">
           {/* Logo Section */}
-          <Link to="/" className="flex items-center gap-2 group relative z-10">
+          <Link to="/" className="flex items-center gap-2 group relative z-10" onClick={() => setShowMobileMenu(false)}>
             <div className="h-8 w-auto md:h-10 flex items-center justify-center">
               <img
                 src="/PU%20Connect%20logo.png"
                 alt="PU Connect"
-                className="w-full h-full object-contain"
+                className={`w-full h-full object-contain transition-all duration-500 ${showMobileMenu ? 'brightness-0 invert' : ''}`}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.parentElement?.classList.add('bg-blue-600', 'rounded-xl', 'text-white', 'p-2');
@@ -199,7 +202,10 @@ export default function Navbar() {
             </div>
 
             {/* Auth/User Section */}
-            <div className="flex items-center gap-4 relative z-10 pl-6 border-l border-gray-200 dark:border-gray-800">
+            <div className={`flex items-center gap-4 relative z-10 transition-all duration-300 ${showMobileMenu
+              ? 'opacity-0 pointer-events-none translate-x-4 invisible'
+              : 'opacity-100 pl-6 border-l border-gray-200 dark:border-gray-800'
+              }`}>
               {/* Dark Mode Toggle */}
               <button
                 onClick={toggleTheme}
@@ -298,14 +304,18 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Mobile Toggle */}
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                <i className={`ri-${showMobileMenu ? 'close' : 'menu-4'}-line text-2xl`}></i>
-              </button>
             </div>
+
+            {/* Mobile Toggle */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className={`lg:hidden p-3 rounded-xl transition-all duration-300 relative z-[70] ${showMobileMenu
+                ? 'text-white bg-white/10 hover:bg-white/20 shadow-lg'
+                : 'text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+            >
+              <i className={`ri-${showMobileMenu ? 'close' : 'menu-4'}-line text-2xl`}></i>
+            </button>
           </div>
         </div>
       </div>
@@ -319,11 +329,11 @@ export default function Navbar() {
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-        <div className={`relative h-full flex flex-col p-8 pt-32 overflow-y-auto transition-transform duration-500 ease-out ${showMobileMenu ? 'translate-y-0' : '-translate-y-12'
+        <div className={`relative h-full flex flex-col p-8 pt-12 overflow-y-auto transition-transform duration-500 ease-out ${showMobileMenu ? 'translate-y-0' : '-translate-y-12'
           }`}>
-          <div className="space-y-2">
-            {/* Mobile Menu Logo */}
-            <div className="flex items-center gap-4 mb-8 pl-2">
+          {/* Mobile Menu Header with Brand and Manual Close */}
+          <div className="flex items-center justify-between mb-10 pl-2">
+            <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/40">
                 <img src="/PU%20Connect%20logo.png" alt="PU Connect" className="w-8 h-8 object-contain brightness-0 invert" />
               </div>
@@ -332,7 +342,9 @@ export default function Navbar() {
                 <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Student Portal</p>
               </div>
             </div>
+          </div>
 
+          <div className="space-y-2">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-4 pl-2">Navigation Terminal</p>
             {[
               { label: 'Home Terminal', path: '/', icon: 'ri-home-5-line', color: 'text-blue-400', bg: 'bg-blue-900/20' },
