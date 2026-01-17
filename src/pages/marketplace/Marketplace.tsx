@@ -49,13 +49,14 @@ function Marketplace() {
 
   const categories = [
     { id: 'all', name: 'Discover All', icon: 'ri-command-fill', color: 'bg-blue-600' },
-    { id: 'electronics', name: 'Electronics', icon: 'ri-macbook-line', color: 'bg-indigo-600' },
-    { id: 'books', name: 'Textbooks', icon: 'ri-book-read-line', color: 'bg-emerald-600' },
-    { id: 'fashion', name: 'Fashion', icon: 'ri-t-shirt-line', color: 'bg-rose-600' },
-    { id: 'food', name: 'Nutrition', icon: 'ri-restaurant-2-line', color: 'bg-amber-600' },
-    { id: 'health', name: 'Essentials', icon: 'ri-capsule-line', color: 'bg-teal-600' },
-    { id: 'academics', name: 'Academic Gear', icon: 'ri-pencil-ruler-2-line', color: 'bg-sky-600' },
-    { id: 'other', name: 'Miscellaneous', icon: 'ri-grid-line', color: 'bg-slate-600' }
+    { id: 'Electronics', name: 'Electronics', icon: 'ri-macbook-line', color: 'bg-indigo-600' },
+    { id: 'Books & Stationery', name: 'Textbooks', icon: 'ri-book-read-line', color: 'bg-emerald-600' },
+    { id: 'Fashion & Accessories', name: 'Fashion', icon: 'ri-t-shirt-line', color: 'bg-rose-600' },
+    { id: 'Food & Beverages', name: 'Nutrition', icon: 'ri-restaurant-2-line', color: 'bg-amber-600' },
+    { id: 'Sports & Fitness', name: 'Sports', icon: 'ri-basketball-line', color: 'bg-orange-600' },
+    { id: 'Home & Living', name: 'Home', icon: 'ri-home-smile-line', color: 'bg-teal-600' },
+    { id: 'Services', name: 'Services', icon: 'ri-service-line', color: 'bg-purple-600' },
+    { id: 'Other', name: 'Miscellaneous', icon: 'ri-grid-line', color: 'bg-slate-600' }
   ];
 
   const filteredAndSortedProducts = useMemo(() => {

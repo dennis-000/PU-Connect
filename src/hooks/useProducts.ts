@@ -47,7 +47,8 @@ export function useProducts(filters?: {
         .limit(100); // Add limit to prevent loading too much data
 
       if (filters?.category && filters.category !== 'all') {
-        query = query.eq('category', filters.category);
+        // Use ilike for case-insensitive matching to handle mismatches like "electronics" vs "Electronics"
+        query = query.ilike('category', filters.category);
       }
 
       if (filters?.search) {
