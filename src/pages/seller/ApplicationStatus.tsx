@@ -31,31 +31,55 @@ export default function ApplicationStatus() {
 
     fetchApplication();
 
-    // Subscribe to real-time updates
+    // Use the effective ID for filtering and channel naming
+    const effectiveUserId = user.id === 'sys_admin_001' ? '00000000-0000-0000-0000-000000000000' : user.id;
+
+    // Subscribe to real-time updates with a unique channel name
     const subscription = supabase
-      .channel('application-updates')
+      .channel(`app-status-${effectiveUserId}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'seller_applications',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${effectiveUserId}`,
         },
         (payload) => {
-          setApplication(payload.new as Application);
-          if (payload.new.status === 'approved') {
+          if (payload.eventType === 'DELETE') {
+            navigate('/seller/apply');
+            return;
+          }
+          const updatedApp = payload.new as Application;
+          setApplication(updatedApp);
+          if (updatedApp.status === 'approved') {
             refreshProfile();
           }
         }
       )
       .subscribe();
 
+    // Secondary Polling Fallback (Every 10 seconds)
+    const interval = setInterval(fetchApplication, 10000);
+
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
+      clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
+
+  // Automatic redirect when approved AND role is updated
+  useEffect(() => {
+    const isSeller = profile?.role === 'seller' || profile?.role === 'publisher_seller' || profile?.role === 'admin' || profile?.role === 'super_admin';
+
+    if (application?.status === 'approved' && isSeller) {
+      const timer = setTimeout(() => {
+        navigate('/seller/dashboard');
+      }, 1500); // Small delay to let the user see the "Approved" message
+      return () => clearTimeout(timer);
+    }
+  }, [application?.status, profile?.role, navigate]);
 
   const fetchApplication = async () => {
     if (!user) return;

@@ -17,6 +17,55 @@ export default function SellerDashboard() {
     }
   }, [profile, navigate]);
 
+  // Immediate protection: If application status changes (e.g. Admin re-evaluates), kick back to status page
+  useEffect(() => {
+    if (!user || profile?.role === 'admin' || profile?.role === 'super_admin') return;
+
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    if (isBypass) return;
+
+    const checkAppStatus = async () => {
+      const { data, error } = await supabase
+        .from('seller_applications')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!error && data && data.status !== 'approved') {
+        navigate('/seller/status');
+      } else if (!error && !data) {
+        // If no application record exists at all, they shouldn't be here
+        navigate('/seller/status');
+      }
+    };
+
+    checkAppStatus();
+
+    const statusSubscription = supabase
+      .channel(`seller-status-guard-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for ALL changes including DELETE
+          schema: 'public',
+          table: 'seller_applications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          if (payload.eventType === 'DELETE') {
+            navigate('/seller/status');
+          } else if (payload.new.status !== 'approved') {
+            navigate('/seller/status');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(statusSubscription);
+    };
+  }, [user, profile, navigate]);
+
   // Notifications
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
@@ -74,7 +123,7 @@ export default function SellerDashboard() {
   };
 
   if (!user || (!['seller', 'admin', 'super_admin', 'publisher_seller'].includes(profile?.role || ''))) {
-    navigate('/marketplace');
+    navigate('/seller/status');
     return null;
   }
 
