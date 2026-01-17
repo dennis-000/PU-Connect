@@ -29,10 +29,11 @@ export default function AdminDashboard() {
   const { profile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  const [applications, setApplications] = useState<(SellerApplication & { user: Profile })[]>([]);
+  const [applications, setApplications] = useState<(SellerApplication & { profiles: Profile })[]>([]);
   const [allProducts, setAllProducts] = useState<(Product & { seller: Profile })[]>([]);
   const [smsHistory, setSmsHistory] = useState<SMSHistory[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [topupHistory, setTopupHistory] = useState<any[]>([]);
 
   const [stats, setStats] = useState({
     users: 0,
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
     pending: 0,
     approved: 0,
     rejected: 0,
+    cancelled: 0,
     news: 0,
     tickets: 0,
     smsBalance: 0,
@@ -69,7 +71,7 @@ export default function AdminDashboard() {
   }>({ faculties: [], departments: [], recentGrowth: [] });
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity' | 'sms'>('overview');
   const [processing, setProcessing] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -200,7 +202,7 @@ export default function AdminDashboard() {
     try {
       if (!isBackground) console.log('📊 Fetching dashboard data...');
 
-      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes, newsletterRes, totalProductsRes] = await Promise.all([
+      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes, newsletterRes, totalProductsRes, topupsRes] = await Promise.all([
         supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(50),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('seller_profiles').select('id', { count: 'exact', head: true }),
@@ -216,13 +218,19 @@ export default function AdminDashboard() {
         supabase.from('website_settings').select('enable_sms').single(),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'buyer'),
         supabase.from('newsletter_subscribers').select('*', { count: 'exact' }),
-        supabase.from('products').select('id', { count: 'exact', head: true })
+        supabase.from('newsletter_subscribers').select('*', { count: 'exact' }),
+        supabase.from('products').select('id', { count: 'exact', head: true }),
+        supabase.from('sms_topups').select('*').order('created_at', { ascending: false }).limit(20)
       ]);
 
       if (logsRes.data) setRecentLogs(logsRes.data);
 
       if (allProductsRes.data) {
         setAllProducts(allProductsRes.data as any || []);
+      }
+
+      if (topupsRes.data) {
+        setTopupHistory(topupsRes.data);
       }
 
       // Handle Applications - Robust Error Handling
@@ -241,6 +249,7 @@ export default function AdminDashboard() {
       const pendingCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'pending').length;
       const approvedCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'approved').length;
       const rejectedCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'rejected').length;
+      const cancelledCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'cancelled').length;
 
       setStats(prev => ({
         ...prev,
@@ -254,6 +263,7 @@ export default function AdminDashboard() {
         pending: pendingCount,
         approved: approvedCount,
         rejected: rejectedCount,
+        cancelled: cancelledCount,
         news: newsRes.count || 0,
         tickets: ticketsRes.count || 0,
         smsEnabled: settingsRes.data?.enable_sms ?? true,
@@ -351,7 +361,7 @@ export default function AdminDashboard() {
     return await supabase.from('seller_applications').update({ status, updated_at: new Date().toISOString() }).eq('id', appId);
   };
 
-  const adminUpsertSellerProfile = async (targetUserId: string, businessName: string, businessCategory: string, businessDescription: string) => {
+  const adminUpsertSellerProfile = async (targetUserId: string, businessName: string, businessCategory: string, businessLogo?: string, businessDescription?: string, contactPhone?: string, contactEmail?: string) => {
     const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     const secret = localStorage.getItem('sys_admin_secret');
 
@@ -371,13 +381,20 @@ export default function AdminDashboard() {
       user_id: targetUserId,
       business_name: businessName,
       business_category: businessCategory,
-      business_description: description,
+      business_logo: businessLogo,
+      business_description: businessDescription || description,
+      contact_phone: contactPhone,
+      contact_email: contactEmail,
+      is_active: true,
       created_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
   };
 
-
-  const handleApprove = async (applicationId: string, userId: string, businessName: string, businessCategory: string) => {
+  const handleApprove = async (application: any) => {
+    const applicationId = application.id;
+    const userId = application.user_id;
+    const businessName = application.business_name;
+    const businessCategory = application.business_category;
     setProcessing(applicationId);
 
     // Get description from application list
@@ -428,7 +445,15 @@ export default function AdminDashboard() {
       if (profileError) throw profileError;
 
       // 3. Create Seller Profile Entry
-      const { error: sellerProfileError } = await adminUpsertSellerProfile(userId, businessName || 'New Business', businessCategory || 'General', description);
+      const { error: sellerProfileError } = await adminUpsertSellerProfile(
+        userId,
+        businessName || 'New Business',
+        businessCategory || 'General',
+        application.business_logo,
+        application.business_description,
+        application.contact_phone,
+        application.contact_email
+      );
       if (sellerProfileError) throw sellerProfileError;
 
       // 4. Activity Logging
@@ -450,9 +475,10 @@ export default function AdminDashboard() {
       if (userData?.phone) {
         try {
           const { sendSMS } = await import('../../lib/arkesel');
+          const firstName = userData.full_name?.split(' ')[0] || 'User';
           await sendSMS(
             [userData.phone],
-            `Congratulations ${userData.full_name.split(' ')[0]}! Your seller application for Campus Connect has been APPROVED.`
+            `Congratulations ${firstName}! Your seller application for "${application.business_name}" has been APPROVED.`
           );
         } catch (smsErr) {
           console.error('Failed to send approval SMS:', smsErr);
@@ -1042,7 +1068,8 @@ export default function AdminDashboard() {
             { id: 'applications', label: 'Applications', icon: 'ri-file-list-3-line', badge: pendingApps.length },
             { id: 'products', label: 'Products', icon: 'ri-shopping-bag-3-line' },
             { id: 'analytics', label: 'Analytics', icon: 'ri-line-chart-line' },
-            { id: 'activity', label: 'Activity', icon: 'ri-history-line' }
+            { id: 'activity', label: 'Activity', icon: 'ri-history-line' },
+            { id: 'sms', label: 'SMS & Credits', icon: 'ri-message-3-line' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1155,14 +1182,14 @@ export default function AdminDashboard() {
                       pendingApps.slice(0, 3).map((app) => (
                         <div key={app.id} className="group flex items-center gap-4 p-4 bg-slate-900/50 rounded-xl border border-white/5 hover:border-blue-500/30 transition-all">
                           <div className="w-12 h-12 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400 font-black text-lg">
-                            {app.user?.full_name?.charAt(0) || 'U'}
+                            {app.profiles?.full_name?.charAt(0) || 'U'}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-bold text-white truncate">{app.business_name}</p>
                               <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-[8px] font-black uppercase rounded">New</span>
                             </div>
-                            <p className="text-[10px] text-slate-500 truncate">Applied by {app.user?.full_name}</p>
+                            <p className="text-[10px] text-slate-500 truncate">Applied by {app.profiles?.full_name}</p>
                           </div>
                           <button
                             onClick={() => setActiveTab('applications')}
@@ -1292,7 +1319,9 @@ export default function AdminDashboard() {
                 <div className="flex gap-2">
                   <span className="px-3 py-1 bg-amber-500/10 text-amber-400 rounded-lg text-xs font-bold">Pending: {stats.pending}</span>
                   <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-bold">Approved: {stats.approved}</span>
+
                   <span className="px-3 py-1 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-bold">Rejected: {stats.rejected}</span>
+                  <span className="px-3 py-1 bg-slate-500/10 text-slate-400 rounded-lg text-xs font-bold">Cancelled: {stats.cancelled}</span>
                 </div>
               </div>
 
@@ -1310,7 +1339,7 @@ export default function AdminDashboard() {
                         <img src={getOptimizedImageUrl(app.business_logo, 100, 100)} alt={app.business_name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-700 text-white text-3xl font-black">
-                          {app.user?.full_name?.charAt(0) || app.business_name?.charAt(0) || 'U'}
+                          {app.profiles?.full_name?.charAt(0) || app.business_name?.charAt(0) || 'U'}
                         </div>
                       )}
                     </div>
@@ -1319,7 +1348,8 @@ export default function AdminDashboard() {
                         <h4 className="text-2xl font-black text-white truncate">{app.business_name}</h4>
                         <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase ${app.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
                           app.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' :
-                            'bg-rose-500/20 text-rose-400'
+                            app.status === 'cancelled' ? 'bg-slate-500/20 text-slate-400' :
+                              'bg-rose-500/20 text-rose-400'
                           }`}>
                           {app.status}
                         </span>
@@ -1327,38 +1357,40 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 font-bold uppercase text-[10px] tracking-wider mb-2">{app.business_category || 'General'} • {new Date(app.created_at).toLocaleDateString()}</p>
                       <p className="text-slate-400 text-sm line-clamp-2 mb-4 max-w-2xl mx-auto xl:mx-0">{app.business_description}</p>
                       <div className="flex flex-wrap justify-center xl:justify-start gap-4">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><i className="ri-user-line text-blue-400"></i>{app.user?.full_name}</div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><i className="ri-user-line text-blue-400"></i>{app.profiles?.full_name}</div>
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><i className="ri-mail-line text-blue-400"></i>{app.contact_email}</div>
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><i className="ri-phone-line text-blue-400"></i>{app.contact_phone}</div>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-                      <button
-                        onClick={() => handleApprove(app.id, app.user_id, app.business_name, app.business_category)}
-                        disabled={!!processing}
-                        className="flex-1 xl:px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                      >
-                        {processing === app.id ? <i className="ri-loader-4-line animate-spin"></i> : 'Approve'}
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (confirm('Hide all existing products for this user?')) {
-                            await adminHideAllProducts(app.user_id);
-                            alert('Products hidden');
-                          }
-                        }}
-                        className="flex-1 xl:px-6 py-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-2xl font-black text-xs uppercase tracking-wider transition-all"
-                      >
-                        Hide Products
-                      </button>
-                      <button
-                        onClick={() => handleReject(app.id)}
-                        disabled={!!processing}
-                        className="flex-1 xl:px-8 py-4 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
-                    </div>
+                    {app.status !== 'cancelled' && (
+                      <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                        <button
+                          onClick={() => handleApprove(app)}
+                          disabled={!!processing}
+                          className="flex-1 xl:px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                        >
+                          {processing === app.id ? <i className="ri-loader-4-line animate-spin"></i> : 'Approve'}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (confirm('Hide all existing products for this user?')) {
+                              await adminHideAllProducts(app.user_id);
+                              alert('Products hidden');
+                            }
+                          }}
+                          className="flex-1 xl:px-6 py-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-2xl font-black text-xs uppercase tracking-wider transition-all"
+                        >
+                          Hide Products
+                        </button>
+                        <button
+                          onClick={() => handleReject(app.id)}
+                          disabled={!!processing}
+                          className="flex-1 xl:px-8 py-4 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-2xl font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -1512,6 +1544,128 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'sms' && (
+            <div className="space-y-8">
+              {/* SMS Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400">
+                      <i className="ri-message-3-line text-2xl"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Sent</p>
+                      <p className="text-2xl font-black text-white">{stats.smsSent?.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                      <i className="ri-wallet-3-line text-2xl"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Credits</p>
+                      <p className="text-2xl font-black text-white">{stats.smsBalance?.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 flex flex-col justify-center">
+                  <Link to="/admin/sms" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm uppercase tracking-wider text-center transition-all shadow-lg shadow-blue-500/20">
+                    Open SMS Console <i className="ri-arrow-right-line ml-2"></i>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Sent History */}
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Recent Broadcasts</h3>
+                    <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">LAST 10</div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-900/50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Message</th>
+                          <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipients</th>
+                          <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {smsHistory.length === 0 ? (
+                          <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No SMS history found</td></tr>
+                        ) : (
+                          smsHistory.map((log) => (
+                            <tr key={log.id} className="hover:bg-slate-700/20 transition-colors">
+                              <td className="px-6 py-4">
+                                <p className="text-xs font-medium text-slate-300 line-clamp-2" title={(log.details as any)?.message || (log as any)?.action_details?.message}>
+                                  {(log.details as any)?.message || (log as any)?.action_details?.message || 'Message content unavailable'}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold rounded">
+                                  {(log.details as any)?.recipient_count || (log as any)?.action_details?.recipient_count || 1}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right text-[10px] text-slate-500 font-mono">
+                                {new Date(log.created_at).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Topup History */}
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Credit Purchase History</h3>
+                    <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">RECENT</div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-900/50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Units</th>
+                          <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {topupHistory.length === 0 ? (
+                          <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No purchase history found</td></tr>
+                        ) : (
+                          topupHistory.map((topup) => (
+                            <tr key={topup.id} className="hover:bg-slate-700/20 transition-colors">
+                              <td className="px-6 py-4 text-[10px] text-slate-400 font-mono">
+                                {new Date(topup.created_at).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs font-black text-white">{topup.units?.toLocaleString()}</span>
+                                <span className="text-[10px] text-slate-500 ml-1">UNITS</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded ${topup.status === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
+                                    topup.status === 'failed' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'
+                                  }`}>
+                                  {topup.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           )}

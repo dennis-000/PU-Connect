@@ -498,9 +498,42 @@ export default function UserManagement() {
       a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
     } else {
-      // PDF Export - Disabled temporarily due to dependency issues
-      alert('PDF Export is temporarily unavailable. Please use CSV format.');
-      return;
+      // PDF Export - Temporarily Disabled due to build issues
+      /*
+      try {
+        const jsPDF = (await import('jspdf')).default;
+        const autoTable = (await import('jspdf-autotable')).default;
+
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text('User Report', 14, 22);
+        doc.setFontSize(11);
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 30);
+
+        const tableData = usersToExport.map(user => keys.map(key => {
+          let val = (user as any)[key];
+          if (key === 'created_at') val = new Date(val).toLocaleDateString();
+          if (key === 'is_active') val = val ? 'Active' : 'Suspended';
+          if (val === null || val === undefined) val = '';
+          return val;
+        }));
+
+        autoTable(doc, {
+          head: [headers],
+          body: tableData,
+          startY: 40,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [37, 99, 235] } // Blue 600
+        });
+
+        doc.save(`users_export_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (err) {
+        console.error('PDF Generation failed:', err);
+        alert('Failed to generate PDF. Please ensure libraries are loaded.');
+      }
+      */
+      alert('PDF Export is temporarily unavailable. Please use CSV export.');
     }
     setShowExportModal(false);
   };
@@ -603,17 +636,11 @@ export default function UserManagement() {
                     {['csv', 'pdf'].map(format => (
                       <button
                         key={format}
-                        onClick={() => {
-                          if (format === 'pdf') {
-                            alert('PDF format is currently disabled. Please use CSV.');
-                            return;
-                          }
-                          setExportConfig(prev => ({ ...prev, format: format as 'csv' | 'pdf' }));
-                        }}
+                        onClick={() => setExportConfig(prev => ({ ...prev, format: format as 'csv' | 'pdf' }))}
                         className={`flex-1 p-4 rounded-xl border-2 font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${exportConfig.format === format
                           ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
                           : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-slate-300'
-                          } ${format === 'pdf' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          }`}
                       >
                         <i className={format === 'csv' ? 'ri-file-excel-2-line text-lg' : 'ri-file-pdf-line text-lg'}></i>
                         {format}
@@ -709,7 +736,7 @@ export default function UserManagement() {
                               <div className="relative">
                                 {user.avatar_url ? (
                                   <img
-                                    src={getOptimizedImageUrl(user.avatar_url, 80, 80)}
+                                    src={user.avatar_url}
                                     alt=""
                                     className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-700"
                                   />
