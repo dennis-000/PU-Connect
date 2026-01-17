@@ -15,7 +15,7 @@ type Application = {
   contact_email: string;
   business_logo?: string;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  rejection_reason?: string;
+  admin_notes?: string;
   created_at: string;
   updated_at: string;
   profiles?: {
@@ -25,7 +25,11 @@ type Application = {
   };
 };
 
-export default function SellerApplications() {
+interface SellerApplicationsProps {
+  isEmbedded?: boolean;
+}
+
+export default function SellerApplications({ isEmbedded = false }: SellerApplicationsProps) {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
@@ -249,7 +253,7 @@ export default function SellerApplications() {
         .from('seller_applications')
         .update({
           status: 'rejected',
-          rejection_reason: rejectionReason,
+          admin_notes: rejectionReason,
           updated_at: new Date().toISOString()
         })
         .eq('id', selectedApp.id);
@@ -293,8 +297,8 @@ export default function SellerApplications() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-300">
-        <Navbar />
+      <div className={isEmbedded ? "py-20" : "min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-300"}>
+        {!isEmbedded && <Navbar />}
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -306,13 +310,14 @@ export default function SellerApplications() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-300">
-      <Navbar />
+    <div className={isEmbedded ? "animate-in fade-in duration-500" : "min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-300"}>
+      {!isEmbedded && <Navbar />}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
+      <div className={isEmbedded ? "w-full" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12"}>
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
+
             <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
               <i className="ri-file-list-3-line text-2xl text-white"></i>
             </div>
@@ -441,7 +446,7 @@ export default function SellerApplications() {
                     <div className="flex items-start gap-4 mb-4">
                       <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
                         {app.business_logo ? (
-                          <img src={app.business_logo} alt="" className="w-full h-full object-cover" />
+                          <img src={`${app.business_logo}?t=${new Date(app.updated_at).getTime()}`} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <i className="ri-store-3-line text-2xl text-white"></i>
                         )}
@@ -498,10 +503,10 @@ export default function SellerApplications() {
                       )}
                     </div>
 
-                    {app.rejection_reason && (
+                    {app.admin_notes && (
                       <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg p-4">
                         <p className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">Rejection Reason:</p>
-                        <p className="text-sm text-red-800 dark:text-red-200/80">{app.rejection_reason}</p>
+                        <p className="text-sm text-red-800 dark:text-red-200/80">{app.admin_notes}</p>
                       </div>
                     )}
                   </div>
