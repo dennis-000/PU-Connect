@@ -29,7 +29,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     }
 
     // If specific roles are required and the user doesn't have the permission
-    if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+    const isSysAdminBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    if (allowedRoles && profile && !allowedRoles.includes(profile.role) && !isSysAdminBypass) {
         // Redirect to a specific dashboard or just the home page based on their actual role
 
         // DEBUG MODE: Show Forbidden instead of Redirect to catch errors

@@ -13,7 +13,7 @@ export default function NewsletterSignup() {
         setStatus('loading');
         try {
             const { error } = await supabase
-                .from('newsletter_subscriptions')
+                .from('newsletter_subscribers')
                 .insert([{ email }]);
 
             if (error) {

@@ -82,7 +82,7 @@ export default function AdminMessages() {
     });
   };
 
-  const startNewChat = (recipient: any) => {
+  const startNewChat = async (recipient: any) => {
     // Check if conversation exists (client-side check for now)
     const existing = conversations.find(c =>
       c.buyer_id === recipient.id || c.seller_id === recipient.id
@@ -90,25 +90,60 @@ export default function AdminMessages() {
 
     if (existing) {
       setSelectedConversation(existing);
+      setShowNewChatModal(false);
     } else {
       // Create conversation immediately
-      import('../../lib/supabase').then(async ({ supabase }) => {
+      const { supabase } = await import('../../lib/supabase');
+
+      try {
         const { data, error } = await supabase.from('conversations').insert({
           buyer_id: user?.id,
           seller_id: recipient.id,
         }).select().single();
 
-        if (data) {
+        if (error) {
+          // Handle missing profile error (foreign key violation)
+          if (error.code === '23503') {
+            // Create missing profile for admin
+            const { error: profileError } = await supabase.from('profiles').upsert({
+              id: user?.id,
+              email: user?.email,
+              full_name: 'Admin User', // Fallback name
+              role: 'admin',
+              created_at: new Date().toISOString()
+            });
+
+            if (!profileError) {
+              // Retry conversation creation
+              const { data: retryData, error: retryError } = await supabase.from('conversations').insert({
+                buyer_id: user?.id,
+                seller_id: recipient.id,
+              }).select().single();
+
+              if (retryData) {
+                // @ts-ignore
+                setSelectedConversation(retryData);
+                window.location.reload();
+              } else if (retryError) {
+                throw retryError;
+              }
+            } else {
+              throw profileError;
+            }
+          } else {
+            throw error;
+          }
+        } else if (data) {
           // @ts-ignore
           setSelectedConversation(data);
-          // Force reload to refresh SWR or react-query cache if possible, or just let realtime handle it
           window.location.reload();
-        } else if (error) {
-          console.error(error);
         }
-      });
+      } catch (err) {
+        console.error('Failed to start chat:', err);
+        alert('Failed to start conversation. Please try again.');
+      }
+      setShowNewChatModal(false);
     }
-    setShowNewChatModal(false);
   };
 
   return (

@@ -132,6 +132,17 @@ export default function SellerApplication() {
       notifyAdmins();
 
 
+      // Log Activity
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'application_submitted',
+          action_details: { business_name: formData.businessName }
+        });
+      } catch (logError) {
+        console.error('Error logging activity:', logError);
+      }
+
       setNotification({ type: 'success', message: '✅ Application submitted successfully! Redirecting to status page...' });
       setTimeout(() => navigate('/seller/status'), 2000);
     } catch (error: any) {

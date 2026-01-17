@@ -91,7 +91,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
+    <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300 bg-african-pattern">
       <Navbar />
 
       {/* Hero Section - Immersive Terminal */}
@@ -177,7 +177,7 @@ export default function Home() {
 
 
       {/* Stats Cluster - Catchy Overlay */}
-      <section className="relative z-20 pb-12 bg-white dark:bg-gray-950">
+      <section className="relative z-20 pb-12 bg-white dark:bg-gray-950 bg-african-pattern">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -243,7 +243,7 @@ export default function Home() {
       </section>
 
       {/* Trending Now - Hot Items */}
-      <section className="py-12 bg-white dark:bg-slate-900 border-y border-slate-50 dark:border-slate-800">
+      <section className="py-12 bg-white dark:bg-slate-900 border-y border-slate-50 dark:border-slate-800 bg-african-pattern">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -302,7 +302,7 @@ export default function Home() {
       </section>
 
       {/* Fresh Drops - Grid Layout Refined */}
-      <section className="py-12 md:py-24 bg-white dark:bg-gray-950">
+      <section className="py-12 md:py-24 bg-white dark:bg-gray-950 bg-african-pattern">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
             <div>
@@ -372,9 +372,9 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
             <div className="order-2 lg:order-1">
               <p className="text-blue-600 font-bold uppercase tracking-widest text-[10px] mb-3">Campus Life</p>
-              <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-[0.9] mb-6">Pentecost<br /><span className="text-blue-600">University.</span></h2>
+              <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-[0.9] mb-6">Campus<br /><span className="text-blue-600">Connect.</span></h2>
               <p className="text-gray-500 dark:text-gray-400 text-base md:text-lg font-medium leading-relaxed mb-8 max-w-xl">
-                Join a vibrant network of scholars, innovators, and friends. Pentecost University isn't just a place to study—it's a home where lifelong connections are forged and dreams take flight.
+                Join a vibrant network of scholars, innovators, and friends. Campus Connect isn't just a place to trade—it's a home where lifelong connections are forged and dreams take flight.
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>
@@ -477,21 +477,11 @@ export default function Home() {
 
       {/* Internship Opportunities Slider */}
       <InternshipSlider />
-      <section className="py-24 relative overflow-hidden bg-gray-900">
-        {/* Background Image Integration */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="/image 5.jpg"
-            alt="Campus Lifestyle"
-            className="w-full h-full object-cover object-center opacity-40 transition-all duration-1000 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-indigo-900/80 to-gray-900/90"></div>
-        </div>
-
+      <section className="py-24 relative overflow-hidden bg-gray-900 bg-glowing-symbols">
         {/* Animated Background Mesh */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500 rounded-full blur-[120px] opacity-20 translate-x-1/3 -translate-y-1/3 animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[100px] opacity-20 -translate-x-1/3 translate-y-1/3"></div>
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500 rounded-full blur-[120px] opacity-10 translate-x-1/3 -translate-y-1/3 animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[100px] opacity-10 -translate-x-1/3 translate-y-1/3"></div>
 
         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-widest mb-8 shadow-lg">

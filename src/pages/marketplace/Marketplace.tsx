@@ -176,7 +176,7 @@ function Marketplace() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
+      <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
         {/* Main Content Area */}
         <div className="py-8 md:py-12">
 
@@ -213,30 +213,30 @@ function Marketplace() {
 
           {/* Product Grid */}
           {productsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                <div key={i} className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 h-[450px] animate-pulse border border-gray-100 dark:border-gray-800">
-                  <div className="bg-gray-100 dark:bg-gray-800 h-64 rounded-[1.5rem] mb-4"></div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl md:rounded-[2rem] p-4 h-[300px] md:h-[450px] animate-pulse border border-gray-100 dark:border-gray-800">
+                  <div className="bg-gray-100 dark:bg-gray-800 h-32 md:h-64 rounded-xl md:rounded-[1.5rem] mb-4"></div>
                   <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-3/4 mb-3"></div>
                   <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-1/2"></div>
                 </div>
               ))}
             </div>
           ) : filteredAndSortedProducts?.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-6">
               {filteredAndSortedProducts.map((product) => {
                 const seller = product.seller as Profile;
                 return (
                   <div
                     key={product.id}
                     onClick={() => navigate(`/product/${product.id}`)}
-                    className="group relative bg-white dark:bg-gray-900 rounded-[1.25rem] sm:rounded-[2rem] p-1.5 sm:p-3 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 cursor-pointer hover:-translate-y-2 dark:hover:bg-gray-800/50"
+                    className="group relative bg-white dark:bg-gray-900 rounded-2xl md:rounded-[2rem] p-2 md:p-3 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 cursor-pointer hover:-translate-y-2 dark:hover:bg-gray-800/50"
                   >
                     {/* Image Container */}
-                    <div className="relative aspect-[4/5] rounded-[1rem] sm:rounded-[1.5rem] overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2 sm:mb-4">
+                    <div className="relative aspect-[4/5] rounded-xl md:rounded-[1.5rem] overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2 sm:mb-4">
                       {product.images?.[0] ? (
                         <img
-                          src={getOptimizedImageUrl(product.images[0], 600, 85)}
+                          src={getOptimizedImageUrl(product.images[0], 400, 85)}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
@@ -249,20 +249,21 @@ function Marketplace() {
                       {/* Overlay Gradient on Hover */}
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                      <div className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 z-10">
+                      <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 z-10 flex flex-col gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavoriteMutation.mutate(product.id);
                           }}
-                          className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 backdrop-blur-md ${favorites.includes(product.id)
+                          className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 backdrop-blur-md ${favorites.includes(product.id)
                             ? 'bg-rose-500 text-white'
                             : 'bg-white/80 dark:bg-black/50 text-gray-600 dark:text-white hover:bg-rose-500 hover:text-white'
                             }`}
                         >
-                          <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-sm sm:text-xl`}></i>
+                          <i className={`${favorites.includes(product.id) ? 'ri-heart-fill' : 'ri-heart-line'} text-sm md:text-xl`}></i>
                         </button>
                       </div>
+
 
                       <div className="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 hidden sm:block">
                         <button className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl text-xs uppercase tracking-widest shadow-lg hover:bg-blue-50 transition-colors">
@@ -323,7 +324,7 @@ function Marketplace() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

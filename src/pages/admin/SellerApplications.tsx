@@ -150,6 +150,21 @@ export default function SellerApplications() {
         }
       }
 
+      // Log Activity
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: profile?.id, // Admin performed the action
+          action_type: 'application_approved',
+          action_details: {
+            business_name: application.business_name,
+            applicant_id: application.user_id,
+            applicant_name: application.profiles?.full_name
+          }
+        });
+      } catch (logErr) {
+        console.error('Error logging approval:', logErr);
+      }
+
       alert('Application approved successfully! SMS notification sent.');
       fetchApplications();
     } catch (error: any) {
@@ -184,6 +199,21 @@ export default function SellerApplications() {
         .eq('id', selectedApp.id);
 
       if (error) throw error;
+
+      // Log Activity
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: profile?.id,
+          action_type: 'application_rejected',
+          action_details: {
+            business_name: selectedApp.business_name,
+            reason: rejectionReason,
+            applicant_name: selectedApp.profiles?.full_name
+          }
+        });
+      } catch (logErr) {
+        console.error('Error logging rejection:', logErr);
+      }
 
       alert('Application rejected');
       setShowModal(false);

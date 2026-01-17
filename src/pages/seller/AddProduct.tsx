@@ -54,10 +54,46 @@ export default function AddProduct() {
   }, [notification]);
 
   useEffect(() => {
-    if (!authLoading && profile?.role !== 'seller' && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
-      navigate('/seller/status');
-    }
-  }, [profile, authLoading, navigate]);
+    const checkEligibility = async () => {
+      if (authLoading) return;
+
+      // 1. Role Check
+      if (profile?.role !== 'seller' && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+        navigate('/seller/status');
+        return;
+      }
+
+      // 2. Subscription Check (Only for non-admins)
+      if (profile?.role === 'seller' && !isAdmin) {
+        try {
+          const { data: settings } = await supabase
+            .from('platform_settings')
+            .select('value')
+            .eq('key', 'subscriptions_enabled')
+            .maybeSingle();
+
+          const isSubsEnabled = settings ? settings.value : true; // Default true
+
+          if (isSubsEnabled) {
+            const { data: seller } = await supabase
+              .from('seller_profiles')
+              .select('subscription_status')
+              .eq('user_id', profile.id)
+              .maybeSingle();
+
+            if (seller && seller.subscription_status !== 'active') {
+              alert('You must have an active subscription to verify and list products.');
+              navigate('/seller/dashboard');
+            }
+          }
+        } catch (err) {
+          console.error('Error checking subscription:', err);
+        }
+      }
+    };
+
+    checkEligibility();
+  }, [profile, authLoading, navigate, isAdmin]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -101,7 +137,9 @@ export default function AddProduct() {
 
     if (!formData.whatsappNumber) newErrors.whatsappNumber = 'WhatsApp number is required';
 
-    // Images are now optional - removed validation
+    // Image validation: At least 1, max 5
+    if (formData.images.length === 0) newErrors.images = 'At least 1 image is required';
+    if (formData.images.length > 5) newErrors.images = 'Maximum 5 images allowed';
 
     if (isAdmin && !formData.sellerId) newErrors.sellerId = 'Please select a merchant';
 
@@ -409,7 +447,7 @@ export default function AddProduct() {
                     </div>
                   ))}
 
-                  {formData.images.length < 8 && (
+                  {formData.images.length < 5 && (
                     <div className="aspect-square bg-white/5 border-2 border-dashed border-white/10 rounded-3xl flex items-center justify-center hover:bg-white/10 transition-all">
                       <ImageUploader
                         onImageUploaded={handleImageUploaded}
@@ -423,12 +461,12 @@ export default function AddProduct() {
                 <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Inventory Slot</span>
-                    <span className="text-xs font-black text-blue-400">{formData.images.length}/8</span>
+                    <span className="text-xs font-black text-blue-400">{formData.images.length}/5</span>
                   </div>
                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500 transition-all duration-500"
-                      style={{ width: `${(formData.images.length / 8) * 100}%` }}
+                      style={{ width: `${(formData.images.length / 5) * 100}%` }}
                     ></div>
                   </div>
                 </div>

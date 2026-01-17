@@ -182,6 +182,9 @@ export default function NewsManagement() {
         if (newsData.is_published && !editingNews.is_published && !editingNews.sms_sent) {
           shouldBroadcast = true;
         }
+
+        logActivity('news_updated', { title: newsData.title, id: editingNews.id });
+
       } else {
         const { data: inserted, error } = await supabase.from('campus_news').insert([newsData]).select().single();
         if (error) throw error;
@@ -190,20 +193,14 @@ export default function NewsManagement() {
         if (newsData.is_published) {
           shouldBroadcast = true;
         }
+
+        logActivity('news_created', { title: newsData.title, id: inserted.id });
       }
 
       // Trigger SMS if needed
       if (shouldBroadcast) {
         broadcastNewsSMS(newsData.title);
-        // We should ideally update sms_sent=true in DB, but broadcastNewsSMS is a helper.
-        // Let's rely on handlePublish logic or update it here.
-        // For now, fire and forget or we can update the record's sms_sent column.
-        // But wait, the record is already saved.
-        // Let's do nothing extra for now regarding sms_sent update here unless I update the helper to update the DB?
-        // Actually, better to update the DB to mark sms_sent=true immediately to avoid double send.
-        // But since we just inserted/updated, we can't easily re-update without ID.
-        // If it was inserted, valid. If updated, valid.
-        // Let's assume standard flow.
+        logActivity('sms_sent', { type: 'news_broadcast', title: newsData.title });
       }
 
       setShowModal(false);
@@ -224,11 +221,18 @@ export default function NewsManagement() {
     }
   };
 
-  // Add logging helper locally for now or rely on global trigger if we had one.
-  // We'll skip manual logging for news for speed, as Auth logging was the main user complaint.
-  // But strictly speaking, we should log logging news creation to activity_logs.
-  // I'll skip it in this file to avoid complex import issues since I'm rewriting the whole file. 
-  // The Auth update covers the user's specific complaint about "no activities found" generally.
+  // Activity Logger
+  const logActivity = async (action: string, details: any) => {
+    try {
+      await supabase.from('activity_logs').insert({
+        user_id: profile?.id,
+        action_type: action,
+        action_details: details
+      });
+    } catch (err) {
+      console.error('Failed to log activity:', err);
+    }
+  };
 
   const handleEdit = (article: NewsArticle) => {
     setEditingNews(article);
@@ -249,6 +253,7 @@ export default function NewsManagement() {
       const { error } = await supabase.from('campus_news').delete().eq('id', id);
       if (error) throw error;
       fetchNews();
+      logActivity('news_deleted', { id });
     } catch (error: any) {
       alert(error.message || 'Failed to delete news');
     }
@@ -279,11 +284,15 @@ export default function NewsManagement() {
 
       if (error) throw error;
 
+      logActivity('news_published', { id, status: newPublishedState ? 'published' : 'unpublished' });
+
       // Trigger SMS Broadcast if needed
       if (shouldSendSMS) {
         const sent = await broadcastNewsSMS(articleTitle);
         if (sent) alert('News published & SMS broadcast sent!');
         else alert('News published (SMS broadcast failed/skipped)');
+
+        logActivity('sms_sent', { type: 'news_broadcast', title: articleTitle });
       }
 
       fetchNews();
@@ -495,10 +504,14 @@ export default function NewsManagement() {
                           <i className="ri-user-smile-line text-lg text-slate-300"></i>
                           {article.author?.full_name || 'Unknown'}
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <i className="ri-eye-line text-lg text-slate-300"></i>
+                        <button
+                          onClick={() => alert(`This article has ${article.views_count.toLocaleString()} views. (Detailed viewer list coming soon)`)}
+                          className="flex items-center gap-1.5 hover:text-blue-600 transition-colors cursor-pointer"
+                          title="Click to see who viewed"
+                        >
+                          <i className="ri-eye-line text-lg text-slate-300 group-hover:text-blue-400 transition-colors"></i>
                           {article.views_count.toLocaleString()}
-                        </span>
+                        </button>
                       </div>
 
                       <div className="flex items-center gap-3">

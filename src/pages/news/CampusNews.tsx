@@ -50,7 +50,7 @@ export default function CampusNews() {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-950/60 to-gray-950"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
+        <div className="max-w-[1536px] mx-auto px-6 md:px-12 relative z-10">
           {/* News Feed Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
             <div className="text-center md:text-left">
@@ -92,7 +92,7 @@ export default function CampusNews() {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 md:py-20">
+      <div className="max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-12 py-12 md:py-20">
 
         {/* Google AdSense Banner */}
         <AdSenseBanner className="mb-12" />
@@ -124,13 +124,13 @@ export default function CampusNews() {
 
         {/* Intel Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-[550px] bg-gray-50 dark:bg-gray-900 rounded-2xl animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <div key={i} className="h-[450px] bg-gray-50 dark:bg-gray-900 rounded-2xl animate-pulse"></div>
             ))}
           </div>
         ) : news.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {news.map((article) => (
               <Link
                 key={article.id}
@@ -143,6 +143,27 @@ export default function CampusNews() {
                     alt={article.title}
                     className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110"
                   />
+                  <div className="absolute top-6 left-6 z-20">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (navigator.share) {
+                          navigator.share({
+                            title: article.title,
+                            text: `Check out this news: ${article.title}`,
+                            url: `${window.location.origin}/news/${article.id}`
+                          }).catch(console.error);
+                        } else {
+                          navigator.clipboard.writeText(`${window.location.origin}/news/${article.id}`);
+                          alert('Link copied!');
+                        }
+                      }}
+                      className="w-10 h-10 bg-black/40 backdrop-blur-md text-white rounded-xl flex items-center justify-center hover:bg-indigo-600 transition-all active:scale-95 shadow-lg"
+                    >
+                      <i className="ri-share-forward-line text-lg"></i>
+                    </button>
+                  </div>
                   <div className="absolute top-6 right-6">
                     <span className="px-4 py-2 bg-indigo-600 text-white text-[9px] font-bold uppercase tracking-wide rounded-lg">
                       {article.category}

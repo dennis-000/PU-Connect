@@ -13,6 +13,10 @@ export default function SellerDashboard() {
   // Notifications
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
+  // Subscription Check
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'expired' | 'inactive' | null>(null);
+  const [globalSubsEnabled, setGlobalSubsEnabled] = useState(true);
+
   useEffect(() => {
     // Subscribe to Global Alerts
     const presenceChannel = supabase.channel('online-users');
@@ -39,6 +43,32 @@ export default function SellerDashboard() {
       return () => clearTimeout(timer);
     }
   }, [notification]);
+
+  useEffect(() => {
+    const checkSubs = async () => {
+      // Only proceed if user is a standard seller (admins bypass)
+      if (profile?.role !== 'seller' || !profile?.id) return;
+
+      const { data: settings } = await supabase
+        .from('platform_settings')
+        .select('value')
+        .eq('key', 'subscriptions_enabled')
+        .maybeSingle();
+
+      const enabled = settings ? settings.value : true;
+      setGlobalSubsEnabled(enabled);
+
+      if (enabled) {
+        const { data: seller } = await supabase
+          .from('seller_profiles')
+          .select('subscription_status')
+          .eq('user_id', profile.id)
+          .maybeSingle();
+        if (seller) setSubscriptionStatus(seller.subscription_status);
+      }
+    };
+    checkSubs();
+  }, [profile]);
 
   const { data: products = [], isLoading } = useProducts({
     sellerId: user?.id
@@ -78,7 +108,7 @@ export default function SellerDashboard() {
       window.location.reload(); // Hard refresh to show change since RPC doesn't trigger react-query easily here
       return;
     }
-    return updateProductMutation.mutate({ id: productId, updates });
+    return updateProductMutation.mutateAsync({ id: productId, updates });
   };
 
   const adminDeleteProduct = async (productId: string) => {
@@ -93,7 +123,7 @@ export default function SellerDashboard() {
       window.location.reload();
       return;
     }
-    return deleteProductMutation.mutate(productId);
+    return deleteProductMutation.mutateAsync(productId);
   };
 
   const handleToggleStatus = async (productId: string, currentStatus: boolean) => {
@@ -132,6 +162,25 @@ export default function SellerDashboard() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-32 md:pt-40 box-border">
+
+        {/* Subscription Warning Banner */}
+        {globalSubsEnabled && subscriptionStatus && subscriptionStatus !== 'active' && profile?.role === 'seller' && (
+          <div className="mb-10 bg-rose-500 rounded-2xl p-6 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                <i className="ri-alarm-warning-fill"></i>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Subscription Expired</h3>
+                <p className="text-white/80 font-medium text-sm">You must renew your subscription to list new products.</p>
+              </div>
+            </div>
+            <button className="px-6 py-3 bg-white text-rose-600 font-bold rounded-xl text-sm uppercase tracking-wide hover:bg-rose-50 transition-colors shadow-lg">
+              Renew Now
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16 md:mb-24 text-center md:text-left">
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 dark:bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full mb-6 shadow-lg shadow-blue-500/20">
