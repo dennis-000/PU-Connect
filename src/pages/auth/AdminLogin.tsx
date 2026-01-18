@@ -20,17 +20,21 @@ export default function AdminLogin() {
 
         try {
             // 2. Check for SYSTEM CREDENTIALS stored in database (Dynamic Override)
-            const { data: settings } = await supabase
-                .from('website_settings')
-                .select('system_default_password')
-                .maybeSingle();
+            try {
+                const { data: settings } = await supabase
+                    .from('website_settings')
+                    .select('system_default_password')
+                    .maybeSingle();
 
-            if (settings && settings.system_default_password && password === settings.system_default_password) {
-                console.log('System Override Activated via DB');
-                localStorage.setItem('sys_admin_bypass', 'true');
-                localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
-                window.location.assign('/admin/dashboard');
-                return;
+                if (settings && settings.system_default_password && password === settings.system_default_password) {
+                    console.log('System Override Activated via DB');
+                    localStorage.setItem('sys_admin_bypass', 'true');
+                    localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
+                    window.location.assign('/admin/dashboard');
+                    return;
+                }
+            } catch (dbError) {
+                console.warn("Database credentials check failed, proceeding to hardcoded fallback", dbError);
             }
 
             // 1. Fallback: Check for HARDCODED System Credentials (Escape Hatch) [Keep for safety if DB fails]
@@ -46,14 +50,6 @@ export default function AdminLogin() {
             const { user, error: authError } = await signIn(email, password);
 
             if (authError) {
-                // Double check if the password entered matches the system default (redundant but safe)
-                if (settings && settings.system_default_password && password === settings.system_default_password) {
-                    localStorage.setItem('sys_admin_bypass', 'true');
-                    localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
-                    window.location.assign('/admin/dashboard');
-                    return;
-                }
-
                 console.warn("Auth failed", authError);
                 setError('Invalid credentials'); // Show error to user
                 return;

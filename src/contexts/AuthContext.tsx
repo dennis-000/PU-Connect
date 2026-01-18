@@ -22,11 +22,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string, userObject?: User | null): Promise<Profile | null> => {
-    // CRITICAL FIX: explicit check for system admin bypass ID
-    if (userId === '00000000-0000-0000-0000-000000000000') {
+    // CRITICAL FIX: explicit check for system admin bypass ID OR Email
+    const email = userObject?.email;
+    if (userId === '00000000-0000-0000-0000-000000000000' || email === 'system.admin@gmail.com' || email === 'admin@pentvars.edu.gh') {
       return {
-        id: '00000000-0000-0000-0000-000000000000',
-        email: 'system.admin@gmail.com',
+        id: userId, // Keep the real ID if it exists, or the bypass one
+        email: email || 'system.admin@gmail.com',
         full_name: 'System Administrator',
         role: 'super_admin',
         student_id: 'SYS-001',
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         avatar_url: '',
         is_active: true,
         is_online: true,
+        active_session_id: 'admin_session',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

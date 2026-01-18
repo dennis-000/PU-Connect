@@ -673,34 +673,36 @@ export default function AdminDashboard() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 bg-admin-pattern">
+    <div className="min-h-screen bg-[#0B1120] bg-admin-pattern text-slate-200 font-sans selection:bg-blue-500/30">
       <Navbar />
 
-      {/* Real-time Status */}
-      <div className="fixed top-20 right-6 z-40">
-        <div className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 backdrop-blur-xl border ${isConnected ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-slate-700/50 border-slate-600/30 text-slate-400'
+      {/* Real-time Status - Pill Design */}
+      <div className="fixed top-24 right-6 z-40 animate-fade-in">
+        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 backdrop-blur-md border shadow-2xl transition-all duration-500 ${isConnected
+          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-emerald-500/10'
+          : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
           }`}>
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
-          {isConnected ? 'Live' : 'Offline'}
+          <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse shadow-[0_0_10px_currentColor]' : 'bg-rose-500'}`}></span>
+          {isConnected ? 'System Online' : 'Reconnecting...'}
         </div>
       </div>
 
       {/* Access Denied Guard */}
       {(!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) && !authLoading && (
-        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6">
-          <div className="max-w-md w-full text-center">
-            <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-              <i className="ri-lock-2-line text-4xl text-rose-500"></i>
-            </div>
-            <h2 className="text-3xl font-black text-white mb-2">Access Restricted</h2>
-            <p className="text-slate-400 mb-8">You do not have permission to view the Admin Dashboard. Current Role: <span className="text-white font-bold">{profile?.role || 'Guest'}</span></p>
-            <div className="flex gap-4 justify-center">
-              <button onClick={() => navigate('/marketplace')} className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors">
-                Go to Marketplace
-              </button>
-              <button onClick={() => navigate('/login')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                Sign In
-              </button>
+        <div className="fixed inset-0 z-50 bg-[#0B1120]/90 backdrop-blur-xl flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center relative">
+            <div className="absolute inset-0 bg-blue-500/20 blur-[100px] rounded-full opacity-50"></div>
+            <div className="relative z-10">
+              <div className="w-24 h-24 bg-gradient-to-br from-rose-500 to-orange-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-rose-500/20 rotate-3 hover:rotate-6 transition-transform">
+                <i className="ri-shield-keyhole-line text-4xl text-white"></i>
+              </div>
+              <h2 className="text-4xl font-black text-white mb-2 tracking-tight">Restricted Area</h2>
+              <p className="text-slate-400 mb-8 font-medium leading-relaxed">This command center is restricted to authorized personnel only. Your access attempt has been logged.</p>
+              <div className="flex gap-4 justify-center">
+                <button onClick={() => navigate('/marketplace')} className="px-8 py-3.5 bg-slate-800/50 border border-white/10 text-white rounded-xl font-bold hover:bg-slate-800 hover:border-white/20 transition-all uppercase tracking-widest text-xs">
+                  Return Home
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -708,217 +710,245 @@ export default function AdminDashboard() {
 
       {/* Notifications */}
       {notification && (
-        <div className="fixed top-32 right-6 z-50 animate-in slide-in-from-right fade-in duration-300">
-          <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-bold backdrop-blur-xl border ${notification.type === 'success' ? 'bg-emerald-600/90 border-emerald-500/50' :
-            notification.type === 'error' ? 'bg-rose-600/90 border-rose-500/50' : 'bg-blue-600/90 border-blue-500/50'
+        <div className="fixed top-32 right-6 z-50 animate-slide-in-right">
+          <div className={`px-6 py-4 rounded-2xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-4 text-white font-bold backdrop-blur-2xl border ${notification.type === 'success' ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-100' :
+            notification.type === 'error' ? 'bg-rose-600/20 border-rose-500/50 text-rose-100' : 'bg-blue-600/20 border-blue-500/50 text-blue-100'
             }`}>
-            <i className={`text-xl ${notification.type === 'success' ? 'ri-checkbox-circle-line' : notification.type === 'error' ? 'ri-error-warning-line' : 'ri-information-line'}`}></i>
-            <span className="text-sm">{notification.message}</span>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${notification.type === 'success' ? 'bg-emerald-500' : notification.type === 'error' ? 'bg-rose-500' : 'bg-blue-500'
+              }`}>
+              <i className={`text-lg ${notification.type === 'success' ? 'ri-check-line' : notification.type === 'error' ? 'ri-close-line' : 'ri-info-i'}`}></i>
+            </div>
+            <span className="text-sm tracking-wide">{notification.message}</span>
           </div>
         </div>
       )}
 
-      <div className="max-w-[1600px] mx-auto px-6 lg:px-8 pt-32 pb-72">
+      <div className="max-w-[1800px] mx-auto px-6 lg:px-12 pt-32 pb-72">
 
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-5xl font-black text-white mb-2 tracking-tight">Admin Dashboard</h1>
-            <p className="text-slate-400 font-medium">Welcome back, <span className="text-blue-400 font-bold">{profile?.full_name}</span></p>
-            <div className="flex gap-4 mt-4">
-              <Link to="/admin/email-templates" className="text-xs font-bold text-slate-500 hover:text-white flex items-center gap-1 uppercase tracking-wider transition-colors">
-                <i className="ri-layout-3-line"></i> Email Templates
+        {/* Dashboard Header */}
+        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-16 relative">
+          {/* Decorative BG */}
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
+
+          <div className="relative z-10">
+            <h1 className="text-5xl md:text-7xl font-black text-white mb-4 tracking-tighter leading-[0.9]">
+              Command <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-violet-400">Center.</span>
+            </h1>
+            <p className="text-slate-400 font-medium max-w-lg text-lg">
+              Welcome back, <span className="text-white font-bold border-b-2 border-blue-500/30 pb-0.5">{profile?.full_name}</span>.
+              System is running optimally.
+            </p>
+
+            <div className="flex flex-wrap gap-4 mt-8">
+              <Link to="/admin/email-templates" className="px-5 py-2.5 rounded-lg bg-slate-800/50 border border-white/5 hover:border-blue-500/30 text-slate-300 text-xs font-bold uppercase tracking-widest hover:text-white transition-all flex items-center gap-2 group">
+                <i className="ri-layout-3-line text-blue-500 group-hover:scale-110 transition-transform"></i> Email Templates
+              </Link>
+              <Link to="/admin/internships" className="px-5 py-2.5 rounded-lg bg-slate-800/50 border border-white/5 hover:border-purple-500/30 text-slate-300 text-xs font-bold uppercase tracking-widest hover:text-white transition-all flex items-center gap-2 group">
+                <i className="ri-briefcase-4-line text-purple-500 group-hover:scale-110 transition-transform"></i> Jobs & Internships
               </Link>
             </div>
-            <p className="text-slate-500 text-sm mt-1">Last updated: {lastUpdate.toLocaleTimeString()}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/profile"
-              className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 rounded-xl font-bold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2"
-            >
-              <i className="ri-user-smile-line text-blue-500"></i>
-              My Profile
-            </Link>
+
+          <div className="flex flex-wrap items-center gap-4 relative z-10">
             <button
               onClick={() => setShowAddAdminModal(true)}
-              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold border border-slate-700 transition-all flex items-center gap-2"
+              className="h-14 px-8 rounded-2xl bg-slate-800/40 border border-white/5 text-white font-bold hover:bg-slate-800 transition-all flex items-center gap-3 group backdrop-blur-sm"
             >
-              <i className="ri-shield-user-line text-blue-400"></i>
-              Manage Access
+              <span className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                <i className="ri-shield-user-fill"></i>
+              </span>
+              <span className="text-sm uppercase tracking-wide">Access Control</span>
             </button>
+
             <button
               onClick={() => fetchData(false)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-bold shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2"
+              className="h-14 w-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 transition-all hover:scale-105 active:scale-95"
             >
-              <i className="ri-refresh-line"></i>
+              <i className={`ri-refresh-line text-xl ${loading ? 'animate-spin' : ''}`}></i>
             </button>
           </div>
         </div>
 
 
-
-        {/* Overview Stats Cards */}
+        {/* Overview Stats Grid */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              {/* Total Users Card */}
-              <Link to="/admin/users" className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-blue-500/20 transition-all group overflow-hidden relative block">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:rotate-12 transition-transform">
-                    <i className="ri-user-heart-line text-2xl"></i>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
+              {/* Total Users - Glass Card */}
+              <Link to="/admin/users" className="relative group overflow-hidden rounded-[1.5rem] bg-[#131c31] border border-white/5 p-6 transition-all duration-500 hover:border-blue-500/30 hover:shadow-[0_0_40px_-10px_rgba(59,130,246,0.15)]">
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-user-smile-fill text-7xl xl:text-8xl text-blue-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="inline-flex p-2.5 rounded-xl bg-blue-500/10 text-blue-400 mb-4 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <i className="ri-user-heart-line text-xl"></i>
                   </div>
-                  <div className="text-right">
-                    <h3 className="text-3xl font-black text-white">{stats.users?.toLocaleString() || '0'}</h3>
-                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Total Users</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-3xl xl:text-4xl font-black text-white tracking-tight">{stats.users?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Users</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+
+                <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/10">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{onlinePresence.total} Active Now</p>
+                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wide">{onlinePresence.total} Online</span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-400">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} new</span>
                 </div>
               </Link>
 
-              {/* Users/Buyers & Subscribers Consolidated */}
-              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-orange-500/20 transition-all group overflow-hidden relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:rotate-12 transition-transform">
-                    <i className="ri-group-line text-2xl"></i>
+              {/* Buyers - Glass Card */}
+              <div className="relative group overflow-hidden rounded-[1.5rem] bg-[#131c31] border border-white/5 p-6 transition-all duration-500 hover:border-indigo-500/30 hover:shadow-[0_0_40px_-10px_rgba(99,102,241,0.15)]">
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-shopping-bag-3-fill text-7xl xl:text-8xl text-indigo-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="inline-flex p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                    <i className="ri-group-line text-xl"></i>
                   </div>
-                  <div className="text-right">
-                    <h3 className="text-3xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</h3>
-                    <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Total Buyers</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-3xl xl:text-4xl font-black text-white tracking-tight">{stats.buyers?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Buyers</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Newsletter</p>
-                    <p className="text-lg font-black text-white">{stats.newsletter?.toLocaleString() || '0'}</p>
-                  </div>
-                  <Link to="/admin/newsletter" className="p-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white transition-all">
-                    <i className="ri-mail-send-line"></i>
-                  </Link>
+
+                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Growth</span>
+                  <span className="text-[9px] font-bold text-emerald-400">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} this week</span>
                 </div>
               </div>
 
-              {/* Sellers Card */}
-              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-emerald-500/20 transition-all group relative overflow-hidden">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                    <i className="ri-store-2-line text-2xl"></i>
+              {/* Sellers - Glass Card */}
+              <div className="relative group overflow-hidden rounded-[1.5rem] bg-[#131c31] border border-white/5 p-6 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.15)]">
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-store-3-fill text-7xl xl:text-8xl text-emerald-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="inline-flex p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 mb-4 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <i className="ri-store-2-line text-xl"></i>
                   </div>
-                  <div>
-                    <h3 className="text-3xl font-black text-white leading-none">{stats.sellers?.toLocaleString() || '0'}</h3>
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">Total Sellers</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-3xl xl:text-4xl font-black text-white tracking-tight">{stats.sellers?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Sellers</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partners</p>
-                    <span className="text-[10px] font-bold text-blue-400 flex items-center gap-1">
-                      {stats.pending} Pending
-                    </span>
-                  </div>
+
+                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Applications</span>
+                  <span className="text-[9px] font-bold text-amber-400">{stats.pending} Pending</span>
                 </div>
               </div>
 
-              {/* Product Analytics Card */}
-              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-purple-500/20 transition-all group relative overflow-hidden flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
-                      <i className="ri-box-3-line text-2xl"></i>
+              {/* Products - Glass Card */}
+              <div className="relative group overflow-hidden rounded-[1.5rem] bg-[#131c31] border border-white/5 p-6 transition-all duration-500 hover:border-purple-500/30 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.15)] flex flex-col justify-between">
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-box-3-fill text-7xl xl:text-8xl text-purple-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start">
+                    <div className="inline-flex p-2.5 rounded-xl bg-purple-500/10 text-purple-400 mb-4 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                      <i className="ri-box-3-line text-xl"></i>
                     </div>
-                    <div>
-                      <h3 className="text-3xl font-black text-white leading-none">{stats.total_products?.toLocaleString() || '0'}</h3>
-                      <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">Total Products</p>
-                    </div>
+                    <button
+                      onClick={() => setIsProductCreatorOpen(true)}
+                      className="p-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-lg shadow-purple-900/40 active:scale-95 group/btn"
+                    >
+                      <i className="ri-add-line text-lg group-hover/btn:rotate-90 transition-transform"></i>
+                    </button>
                   </div>
-                  <div className="pt-4 border-t border-white/5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inventory</p>
-                      <span className="text-[10px] font-bold text-emerald-400">
-                        {stats.products_count?.toLocaleString() || '0'} Live
-                      </span>
-                    </div>
+                  <div className="space-y-0.5">
+                    <h3 className="text-3xl xl:text-4xl font-black text-white tracking-tight">{stats.total_products?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Products</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsProductCreatorOpen(true)}
-                  className="w-full mt-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-purple-900/20"
-                >
-                  <i className="ri-add-circle-line mr-2 text-lg align-middle"></i>
-                  Add Product
-                </button>
+
+                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between relative z-10">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Inventory</span>
+                  <span className="text-[9px] font-bold text-emerald-400">{stats.products_count} Active</span>
+                </div>
               </div>
             </div>
 
             {/* Quick Overview & Status Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-slate-900/50 rounded-2xl p-6 border border-white/5 backdrop-blur-xl relative overflow-hidden group">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="bg-slate-900/50 rounded-[2rem] p-6 xl:p-8 border border-white/5 backdrop-blur-xl relative overflow-hidden group">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                      <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em]">Presence Terminal • LIVE</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.25em]">Presence Terminal • LIVE</p>
                     </div>
-                    <h4 className="text-3xl font-black text-white flex items-center gap-2">
+                    <h4 className="text-3xl xl:text-4xl font-black text-white flex items-end gap-2 mb-2">
                       {onlinePresence.total}
-                      <span className="text-xs font-medium text-slate-400">Online Now</span>
+                      <span className="text-sm font-bold text-slate-500 mb-1">Online Now</span>
                     </h4>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                  <div className="flex flex-wrap gap-2">
+                    <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all text-center min-w-[70px]">
                       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Buyers</p>
-                      <p className="text-xl font-black text-white">{onlinePresence.buyers}</p>
+                      <p className="text-lg font-black text-white">{onlinePresence.buyers}</p>
                     </div>
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                    <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all text-center min-w-[70px]">
                       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Sellers</p>
-                      <p className="text-xl font-black text-white">{onlinePresence.sellers}</p>
+                      <p className="text-lg font-black text-white">{onlinePresence.sellers}</p>
                     </div>
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                    <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all text-center min-w-[70px]">
                       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Admins</p>
-                      <p className="text-xl font-black text-white">{onlinePresence.admins}</p>
+                      <p className="text-lg font-black text-white">{onlinePresence.admins}</p>
                     </div>
                   </div>
                 </div>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-600/10 transition-colors"></div>
+                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full -mr-20 -mt-20 blur-[100px] pointer-events-none"></div>
               </div>
 
-              <div className="bg-slate-900/50 rounded-2xl p-6 border border-white/5 backdrop-blur-xl grid grid-cols-3 gap-4">
-                <div className="flex flex-col justify-center">
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Buyers</p>
-                  <p className="text-2xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</p>
+              <div className="bg-slate-900/50 rounded-[2rem] p-6 xl:p-8 border border-white/5 backdrop-blur-xl flex flex-col justify-center gap-6">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Buyers</p>
+                    <p className="text-2xl xl:text-3xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} New</p>
+                    <div className="w-20 h-1 bg-emerald-500/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-3/4 animate-pulse"></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col justify-center border-x border-white/5 px-4">
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admins</p>
-                  <p className="text-2xl font-black text-emerald-400">{stats.admins?.toLocaleString() || '0'}</p>
-                </div>
-                <div className="flex flex-col justify-center pl-4">
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Publishers</p>
-                  <p className="text-2xl font-black text-purple-400">{stats.publishers?.toLocaleString() || '0'}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admins</p>
+                    <p className="text-xl font-black text-emerald-400">{stats.admins?.toLocaleString() || '0'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Publishers</p>
+                    <p className="text-xl font-black text-purple-400">{stats.publishers?.toLocaleString() || '0'}</p>
+                  </div>
                 </div>
               </div>
             </div>
-
-
           </>
         )}
 
         {/* PROMINENT ALERTS - SMS & Pending Applications */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
           {/* SMS Balance Alert / System Status Reflection */}
-          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 flex flex-col justify-between ${isSmsLoading
+          <div className={`relative overflow-hidden rounded-[2rem] p-6 border-2 flex flex-col justify-between transition-all duration-500 ${isSmsLoading
             ? 'bg-slate-800/50 border-slate-700/50'
             : !stats.smsEnabled
               ? 'bg-slate-800/50 border-slate-700 grayscale'
               : stats.smsBalance < 50
-                ? 'bg-gradient-to-br from-rose-600/20 to-rose-700/20 border-rose-500/50'
-                : 'bg-gradient-to-br from-violet-600/20 to-violet-700/20 border-violet-500/50'
+                ? 'bg-gradient-to-br from-rose-950/50 to-rose-900/50 border-rose-500/30'
+                : 'bg-gradient-to-br from-indigo-950/50 to-violet-900/50 border-indigo-500/30'
             }`}>
             {!stats.smsEnabled && (
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center p-6">
@@ -926,109 +956,80 @@ export default function AdminDashboard() {
                 <div className="px-4 py-1.5 bg-slate-800 rounded-full border border-white/10 text-[10px] font-black text-slate-300 uppercase tracking-widest shadow-2xl">
                   SMS System Offline
                 </div>
-                <p className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Notifications Disabled</p>
               </div>
             )}
 
-            <div className="relative flex-1">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-xl ${isSmsLoading
-                    ? 'bg-slate-700/50'
-                    : stats.smsBalance < 50 ? 'bg-rose-500/20' : 'bg-violet-500/20'
-                    } flex items-center justify-center`}>
-                    {isSmsLoading ? (
-                      <i className="ri-loader-4-line text-3xl text-slate-500 animate-spin"></i>
-                    ) : (
-                      <i className={`ri-message-3-line text-3xl ${stats.smsBalance < 50 ? 'text-rose-400' : 'text-violet-400'}`}></i>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-3xl font-black text-white">{isSmsLoading ? '...' : (stats.smsBalance?.toLocaleString() || '0')}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMS Balance</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleSMS}
-                    className={`px-4 py-2 rounded-xl font-bold text-xs transition-all border ${stats.smsEnabled
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                      }`}
-                  >
-                    System: {stats.smsEnabled ? 'ON' : 'OFF'}
-                  </button>
-                  <Link
-                    to="/admin/sms"
-                    className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/5"
-                  >
-                    <i className="ri-history-line"></i>
-                  </Link>
-                </div>
+            <div className="relative z-0 flex justify-between items-start mb-6">
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
+                <i className="ri-message-3-fill text-2xl text-white"></i>
               </div>
-
-              {!isSmsLoading && stats.smsBalance < 50 && stats.smsEnabled && (
-                <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold uppercase tracking-wide mb-4">
-                  <i className="ri-error-warning-fill text-lg"></i>
-                  <span>Low Credit Balance - Top up soon</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-white/5">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Arkesel Credits Available</p>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${stats.smsEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stats.smsEnabled ? 'Functional' : 'Halted'}</span>
+              <div className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${stats.smsBalance < 50 ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                }`}>
+                {stats.smsBalance < 50 ? 'Balance Low' : 'Healthy'}
               </div>
             </div>
+
+            <div>
+              <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">SMS Credit Balance</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-5xl font-black text-white tracking-tighter">
+                  {isSmsLoading ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    stats.smsBalance?.toFixed(2)
+                  )}
+                </h3>
+                <span className="text-lg font-bold text-white/40">GHS</span>
+              </div>
+              <p className="text-[10px] font-medium text-white/40 mt-1">
+                {stats.smsSent} messages sent in current session
+              </p>
+            </div>
+
+            {/* Background Decoration */}
+            <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
           </div>
 
           {/* Pending Applications Alert */}
-          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 flex flex-col justify-between ${pendingApps.length > 0
-            ? 'bg-gradient-to-br from-amber-600/20 to-amber-700/20 border-amber-500/50'
-            : 'bg-gradient-to-br from-emerald-600/20 to-emerald-700/20 border-emerald-500/50'
+          <div className={`relative overflow-hidden rounded-[2rem] p-6 border-2 flex flex-col justify-between transition-all duration-500 ${pendingApps.length > 0
+            ? 'bg-gradient-to-br from-amber-950/50 to-orange-900/50 border-amber-500/30'
+            : 'bg-gradient-to-br from-emerald-950/50 to-teal-900/50 border-emerald-500/30'
             }`}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-14 h-14 rounded-xl ${pendingApps.length > 0 ? 'bg-amber-500/20' : 'bg-emerald-500/20'} flex items-center justify-center`}>
-                    <i className={`ri-file-list-3-line text-3xl ${pendingApps.length > 0 ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}></i>
-                  </div>
-                  <div>
-                    <h4 className="text-3xl font-black text-white">{pendingApps.length}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending Applications</p>
-                  </div>
+            <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -mr-20 -mt-20 blur-[100px] pointer-events-none"></div>
+
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
+                  <i className={`text-2xl ${pendingApps.length > 0 ? 'ri-file-list-3-fill text-amber-400' : 'ri-checkbox-circle-fill text-emerald-400'}`}></i>
                 </div>
+                <div className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${pendingApps.length > 0 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  }`}>
+                  {pendingApps.length > 0 ? 'Review Needed' : 'All Clear'}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-5xl font-black text-white tracking-tighter mb-1">{pendingApps.length}</h4>
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-4">Pending Applications</p>
+
                 {pendingApps.length > 0 ? (
                   <button
                     onClick={() => setActiveTab('applications')}
-                    className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-amber-500/20"
+                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2 group"
                   >
                     Review Now
+                    <i className="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
                   </button>
                 ) : (
-                  <div className="px-6 py-3 bg-emerald-600/20 text-emerald-400 rounded-xl font-bold text-sm flex items-center gap-2">
-                    <i className="ri-checkbox-circle-line"></i>
-                    All Clear
+                  <div className="w-full py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 cursor-default">
+                    <i className="ri-check-double-line"></i>
+                    System Optimized
                   </div>
                 )}
               </div>
-              {pendingApps.length > 0 && (
-                <div className="flex items-center gap-2 text-amber-300 text-sm font-bold">
-                  <i className="ri-notification-3-line animate-pulse"></i>
-                  <span>{pendingApps.length} seller application{pendingApps.length !== 1 ? 's' : ''} awaiting review</span>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-
-
-
-        {/* Tabbed Navigation */}
+        </div>        {/* Tabbed Navigation */}
         <div className="flex border-b border-slate-700/50 mb-8 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview', icon: 'ri-dashboard-2-line' },
@@ -1660,6 +1661,6 @@ export default function AdminDashboard() {
         onClose={() => setIsProductCreatorOpen(false)}
         onSuccess={() => fetchData().then(() => setNotification({ type: 'success', message: 'Product added successfully' }))}
       />
-    </div >
+    </div>
   );
 }

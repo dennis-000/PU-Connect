@@ -289,13 +289,17 @@ export default function UserManagement() {
     setUsers(users.filter(u => u.id !== userId));
 
     try {
-      // Call the Edge Function to delete from both Auth and Profiles
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId }
+      // Use RPC for reliable deletion
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret');
+
+      const { data, error } = await supabase.rpc('admin_delete_user', {
+        target_user_id: userId,
+        secret_key: isBypass ? secret : null
       });
 
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Failed to delete user');
+      if (data && !data.success) throw new Error(data.error || 'Failed to delete user');
 
       setOpenDropdown(null);
       setShowSuccessToast(true);
@@ -304,7 +308,7 @@ export default function UserManagement() {
     } catch (error: any) {
       console.error('Error deleting user:', error);
       setUsers(previousUsers); // Revert
-      alert(`Failed to delete user: ${error.message || 'System error. Check permissions.'}`);
+      alert(`Failed to delete user: ${error.message || 'System error.'}`);
     }
   };
 

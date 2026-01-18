@@ -180,7 +180,7 @@ export default function Register() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Campus Identity.</span>
             </h1>
             <p className="text-sm text-slate-400 font-medium leading-relaxed max-w-sm opacity-90 border-l-2 border-blue-500/50 pl-6 backdrop-blur-sm bg-slate-900/30 py-2 rounded-r-lg">
-              Join thousands of students in the most trusted marketplace at Pentecost University. Sell, buy, and grow together.
+              Join thousands of students in the most trusted marketplace on Campus. Sell, buy, and grow together.
             </p>
           </div>
         </div>
