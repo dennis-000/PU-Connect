@@ -31,7 +31,7 @@ export default function NewsletterManagement() {
     const fetchSubscribers = async () => {
         try {
             const { data, error } = await supabase
-                .from('newsletter_subscriptions')
+                .from('newsletter_subscribers')
                 .select('*')
                 .order('created_at', { ascending: false });
 
@@ -50,7 +50,7 @@ export default function NewsletterManagement() {
 
         try {
             const { error } = await supabase
-                .from('newsletter_subscriptions')
+                .from('newsletter_subscribers')
                 .delete()
                 .eq('id', id);
 

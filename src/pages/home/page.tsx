@@ -68,16 +68,25 @@ export default function Home() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const { count: productCount } = await supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true);
-      const { count: userCount } = await supabase.from('profiles').select('id', { count: 'exact', head: true });
-
-      setStats(prev => ({
-        ...prev,
-        products: productCount || 0,
-        students: userCount || 0
-      }));
+      // Use RPC for accurate count bypassing RLS
+      const { data, error } = await supabase.rpc('get_public_stats');
+      if (data && !error) {
+        setStats(prev => ({
+          ...prev,
+          products: data.products || 0,
+          students: data.users || 0
+        }));
+      } else {
+        // Fallback
+        const { count: productCount } = await supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true);
+        const { count: userCount } = await supabase.from('profiles').select('id', { count: 'exact', head: true });
+        setStats(prev => ({
+          ...prev,
+          products: productCount || 0,
+          students: userCount || 0
+        }));
+      }
     };
-
     fetchStats();
 
     const channel = supabase.channel('home-realtime-stats')
@@ -378,7 +387,7 @@ export default function Home() {
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight mb-1">5K+</h4>
+                  <h4 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight mb-1">{stats.students?.toLocaleString() || '0'}+</h4>
                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Active Students</p>
                 </div>
                 <div>
@@ -472,8 +481,39 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Internship Opportunities Slider */}
-      <InternshipSlider />
+      {/* LinkedIn Job Highlights Section */}
+      {/* We reuse the InternshipSlider but wrap it or give it a title? */}
+      {/* Actually the user asked to 'display the linkedin JOb on the home section' */}
+      {/* Let's make the InternshipSlider component handle this better or pass a prop? */}
+      {/* InternshipSlider seems self-contained. Let's look at InternshipSlider first or trust it pulls from the updated hook */}
+      {/* The updated hook pulls LinkedIn jobs now, so InternshipSlider should ALREADY show them. */}
+      {/* But let's make it explicit on the UI as requested if needed. */}
+      {/* For now, let's just create a Section Title around it if it doesn't have one, or clarify. */}
+      {/* Checking the file usage: <InternshipSlider /> is used directly. */}
+      {/* I will trust InternshipSlider uses useInternships hook which now has LinkedIn jobs. */}
+      {/* I'll wrap it in a nicer section container to make it pop as "Career Opportunities" */}
+
+      <section className="py-12 md:py-24 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 mb-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-600 font-bold uppercase tracking-widest text-xs mb-3">Careers & Growth</p>
+              <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">Latest <span className="text-blue-600">Internships.</span></h2>
+            </div>
+            <div className="hidden md:flex items-center gap-2">
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">
+                <i className="ri-linkedin-fill"></i> Powered by LinkedIn
+              </span>
+            </div>
+          </div>
+        </div>
+        <InternshipSlider />
+        <div className="text-center mt-12">
+          <Link to="/internships" className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-widest transition-colors">
+            View All Opportunities <i className="ri-arrow-right-line"></i>
+          </Link>
+        </div>
+      </section>
       <section className="py-24 relative overflow-hidden bg-gray-900 bg-glowing-symbols">
         {/* Animated Background Mesh */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
@@ -486,7 +526,7 @@ export default function Home() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span>Join 3,000+ Students</span>
+            <span>Join {stats.students?.toLocaleString() || '0'}+ Students</span>
           </div>
 
           <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-none drop-shadow-lg">

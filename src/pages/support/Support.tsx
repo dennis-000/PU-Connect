@@ -23,17 +23,32 @@ export default function Support() {
 
         setLoading(true);
         try {
-            const { error } = await supabase.from('support_tickets').insert({
-                user_id: user.id,
-                subject,
-                message,
-                status: 'open',
-                priority: 'medium'
-            });
+            const priority = 'medium'; // Default priority for user submissions
 
-            if (error) {
-                console.error('Supabase Support Ticket Insert Error:', error);
-                throw error;
+            // 2. Submit Ticket
+            if (user.id === '00000000-0000-0000-0000-000000000000') {
+                // System Admin Bypass Submission
+                const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892'; // fallback default
+                const { error: rpcError } = await supabase.rpc('admin_create_ticket', {
+                    subject,
+                    message,
+                    priority,
+                    secret_key: secret
+                });
+                if (rpcError) throw rpcError;
+            } else {
+                // Standard User Submission
+                const { error: submitError } = await supabase
+                    .from('support_tickets')
+                    .insert({
+                        user_id: user.id,
+                        subject,
+                        message,
+                        priority,
+                        status: 'open'
+                    });
+
+                if (submitError) throw submitError;
             }
 
             setSuccess(true);

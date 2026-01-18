@@ -489,7 +489,7 @@ export default function Navbar() {
             {/* Application or Seller Action */}
             {!['super_admin', 'admin'].includes(profile?.role || '') && (
               <>
-                {dashboardItem ? (
+                {dashboardItem && (
                   <Link
                     to={dashboardItem.path}
                     onClick={() => setShowMobileMenu(false)}
@@ -510,24 +510,28 @@ export default function Navbar() {
                     </div>
                     <i className="ri-arrow-right-line text-xl text-gray-500 group-hover:text-white transition-colors"></i>
                   </Link>
-                ) : !['seller', 'publisher_seller'].includes(profile?.role || '') && (
-                  <Link
-                    to="/seller/apply"
-                    onClick={() => setShowMobileMenu(false)}
-                    className="group flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 hover:border-orange-500/40 transition-all active:scale-[0.98]"
-                  >
-                    <div className="flex items-center gap-5">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-900/40">
-                        <i className="ri-store-2-line text-xl"></i>
-                      </div>
-                      <div>
-                        <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 tracking-tight">Become a Seller</span>
-                        <p className="text-[10px] font-bold text-orange-500/60 uppercase tracking-wide mt-1">Start Trading</p>
-                      </div>
-                    </div>
-                    <i className="ri-arrow-right-line text-xl text-orange-500/40 group-hover:text-orange-400 transition-colors"></i>
-                  </Link>
                 )}
+
+                {/* Show Become Seller if eligible */}
+                {!['seller', 'publisher_seller', 'admin', 'super_admin'].includes(profile?.role || '') &&
+                  (!applicationStatus || applicationStatus === 'cancelled' || applicationStatus === 'rejected') && (
+                    <Link
+                      to="/seller/apply"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="group flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 hover:border-orange-500/40 transition-all active:scale-[0.98]"
+                    >
+                      <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-900/40">
+                          <i className="ri-store-2-line text-xl"></i>
+                        </div>
+                        <div>
+                          <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 tracking-tight">Become a Seller</span>
+                          <p className="text-[10px] font-bold text-orange-500/60 uppercase tracking-wide mt-1">Start Trading</p>
+                        </div>
+                      </div>
+                      <i className="ri-arrow-right-line text-xl text-orange-500/40 group-hover:text-orange-400 transition-colors"></i>
+                    </Link>
+                  )}
               </>
             )}
 

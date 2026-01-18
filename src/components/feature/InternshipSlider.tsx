@@ -59,22 +59,10 @@ export default function InternshipSlider() {
     const displayInternships = [...internships, ...internships];
 
     return (
-        <section className="py-12 bg-white dark:bg-gray-950 border-y border-gray-100 dark:border-gray-900 overflow-hidden">
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 mb-8 flex items-center justify-between">
-                <div>
-                    <span className="text-blue-600 font-bold uppercase tracking-widest text-[10px] mb-2 block">Career Growth</span>
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        Internship <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Opportunities.</span>
-                    </h2>
-                </div>
-                <div className="hidden md:flex gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Powered by LinkedIn & Partners</span>
-                </div>
-            </div>
-
+        <div className="w-full overflow-hidden">
             <div
                 ref={scrollRef}
-                className="flex gap-6 overflow-x-hidden pb-4 px-4 w-full select-none"
+                className="flex gap-6 overflow-x-hidden pb-4 px-6 lg:px-12 w-full select-none"
                 style={{ WebkitOverflowScrolling: 'touch' }}
             >
                 {displayInternships.map((job, index) => (
@@ -83,34 +71,43 @@ export default function InternshipSlider() {
                         href={job.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-none w-[300px] md:w-[350px] bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-lg transition-all group cursor-pointer"
+                        className="flex-none w-[320px] md:w-[400px] bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-xl transition-all group cursor-pointer flex flex-col h-[280px]"
                     >
                         <div className="flex items-start justify-between mb-4">
-                            <div className="w-12 h-12 rounded-xl bg-white dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-center">
                                 <img
                                     src={job.logo_url || "https://ui-avatars.com/api/?name=Job&background=random"}
                                     alt={job.company}
                                     className="w-full h-full object-contain rounded-lg"
                                 />
                             </div>
-                            <span className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full ${job.source === 'Abroad'
+                            <div className="flex flex-col items-end gap-1">
+                                <span className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full ${job.source === 'Abroad'
                                     ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
                                     : 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                                }`}>
-                                {job.type}
-                            </span>
+                                    }`}>
+                                    {job.type}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                    {new Date(job.posted_at).toLocaleDateString()}
+                                </span>
+                            </div>
                         </div>
 
-                        <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                        <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
                             {job.title}
                         </h3>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 line-clamp-1">
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 line-clamp-1">
                             {job.company} • {job.location}
                         </p>
 
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed flex-grow">
+                            {job.description || "Exciting opportunity to join a leading team. Click to read more details and apply."}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800 mt-auto">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-1">
-                                {job.source === 'LinkedIn' && <i className="ri-linkedin-box-fill text-blue-700 text-sm"></i>}
+                                {job.source === 'LinkedIn' && <i className="ri-linkedin-box-fill text-blue-700 text-base"></i>}
                                 {job.source}
                             </span>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
@@ -120,6 +117,6 @@ export default function InternshipSlider() {
                     </a>
                 ))}
             </div>
-        </section>
+        </div>
     );
 }

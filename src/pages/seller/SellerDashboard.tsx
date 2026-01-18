@@ -336,7 +336,7 @@ export default function SellerDashboard() {
               </div>
               <div>
                 <h3 className="text-xl font-bold">Subscription Expired</h3>
-                <p className="text-white/80 font-medium text-sm">You must renew your subscription to list new products.</p>
+                <p className="text-white/80 font-medium text-sm">Your dashboard is view-only. Renew to list new products.</p>
               </div>
             </div>
             <button className="px-6 py-3 bg-white text-rose-600 font-bold rounded-xl text-sm uppercase tracking-wide hover:bg-rose-50 transition-colors shadow-lg">
@@ -403,13 +403,23 @@ export default function SellerDashboard() {
               <i className="ri-settings-4-line text-lg text-blue-500"></i>
               <span>Edit Business Information</span>
             </button>
-            <Link
-              to="/seller/add-product"
-              className="group px-10 py-5 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-lg shadow-blue-500/20"
-            >
-              <span>Add New Product</span>
-              <i className="ri-add-line text-xl"></i>
-            </Link>
+            {(!globalSubsEnabled || (subscriptionStatus === 'active' || profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'publisher_seller')) ? (
+              <Link
+                to="/seller/add-product"
+                className="group px-10 py-5 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-lg shadow-blue-500/20"
+              >
+                <span>Add New Product</span>
+                <i className="ri-add-line text-xl"></i>
+              </Link>
+            ) : (
+              <button
+                disabled
+                className="group px-10 py-5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-bold text-xs uppercase tracking-widest rounded-2xl cursor-not-allowed flex items-center justify-center gap-4"
+              >
+                <span>Subscription Needed</span>
+                <i className="ri-lock-2-line text-xl"></i>
+              </button>
+            )}
             {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
               <button
                 onClick={() => navigate('/admin/dashboard')}
