@@ -75,7 +75,7 @@ export default function AdminDashboard() {
   }>({ faculties: [], departments: [], recentGrowth: [] });
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity' | 'sms'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity' | 'sms' | 'settings'>('overview');
   const [processing, setProcessing] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
