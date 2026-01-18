@@ -39,8 +39,25 @@ const Internships = lazy(() => import('../pages/internships/Internships'));
 const SupportTickets = lazy(() => import('../pages/admin/SupportTickets'));
 const PollManagement = lazy(() => import('../pages/admin/PollManagement'));
 const EmailTemplates = lazy(() => import('../pages/admin/EmailTemplates'));
+const SellersList = lazy(() => import('../pages/admin/SellersList'));
 
 const routes: RouteObject[] = [
+  {
+    path: '/admin/seller-applications',
+    element: (
+      <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+        <SellerApplications />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/sellers',
+    element: (
+      <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+        <SellersList />
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/',
     element: <Home />,

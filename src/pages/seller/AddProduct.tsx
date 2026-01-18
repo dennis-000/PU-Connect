@@ -138,9 +138,9 @@ export default function AddProduct() {
 
     if (!formData.whatsappNumber) newErrors.whatsappNumber = 'WhatsApp number is required';
 
-    // Image validation: At least 1, max 5
+    // Image validation: At least 1, max 8
     if (formData.images.length === 0) newErrors.images = 'At least 1 image is required';
-    if (formData.images.length > 5) newErrors.images = 'Maximum 5 images allowed';
+    if (formData.images.length > 8) newErrors.images = 'Maximum 8 images allowed';
 
     if (isAdmin && !formData.sellerId) newErrors.sellerId = 'Please select a merchant';
 
@@ -467,14 +467,23 @@ export default function AddProduct() {
                     </div>
                   ))}
 
-                  {formData.images.length < 5 && (
-                    <div className="aspect-square bg-white/5 border-2 border-dashed border-white/10 rounded-3xl flex items-center justify-center hover:bg-white/10 transition-all">
+                  {formData.images.length < 8 && (
+                    <div className="aspect-square bg-white/5 border-2 border-dashed border-white/10 rounded-3xl relative group hover:bg-white/10 transition-all cursor-pointer">
+                      {/* Visual UI Layer */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-500 group-hover:text-blue-400 transition-colors pointer-events-none z-0">
+                        <i className="ri-image-add-line text-3xl group-hover:scale-110 transition-transform duration-300"></i>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Add Photo</span>
+                      </div>
+
+                      {/* Functional Click Layer */}
                       <ImageUploader
                         folder="products"
                         autoUpload={false}
                         onFileSelected={handleFileSelect}
                         hideInternalUI={true}
-                        className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-500 hover:text-white transition-colors cursor-pointer"
+                        size="custom"
+                        noBorder
+                        className="absolute inset-0 z-10 w-full h-full"
                       />
                     </div>
                   )}
@@ -483,12 +492,12 @@ export default function AddProduct() {
                 <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Inventory Slot</span>
-                    <span className="text-xs font-black text-blue-400">{formData.images.length}/5</span>
+                    <span className="text-xs font-black text-blue-400">{formData.images.length}/8</span>
                   </div>
                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500 transition-all duration-500"
-                      style={{ width: `${(formData.images.length / 5) * 100}%` }}
+                      style={{ width: `${(formData.images.length / 8) * 100}%` }}
                     ></div>
                   </div>
                 </div>
