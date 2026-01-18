@@ -2,6 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* African Pattern Aesthetics */
+.bg-african-pattern {
+  position: relative;
+  z-index: 1;
+}
+
+.bg-african-pattern::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/assets/patterns/modern_pattern.png');
+  background-repeat: repeat;
+  background-size: 500px;
+  opacity: 0.18;
+  /* Increased for better visibility */
+  pointer-events: none;
+  z-index: -1;
+  mix-blend-mode: multiply;
+  animation: bg-drift 120s linear infinite;
+}
+
+@keyframes bg-drift {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 1000px 1000px;
+  }
+}
+
+.dark .bg-african-pattern::before {
+  opacity: 0.12;
+  mix-blend-mode: soft-light;
+  filter: brightness(0.8) contrast(1.2);
+}
+
+.bg-admin-pattern {
+  position: relative;
+  z-index: 1;
+}
+
+.bg-admin-pattern::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/assets/patterns/modern_pattern.png');
+  background-repeat: repeat;
+  background-size: 600px;
+  opacity: 0.22;
+  /* High visibility for Admin */
+  pointer-events: none;
+  z-index: -1;
+  mix-blend-mode: overlay;
+  animation: bg-drift 150s linear infinite;
+}
+
+.dark .bg-admin-pattern::before {
+  opacity: 0.15;
+  filter: brightness(0.8) contrast(1.1);
+}
+
+/* Glowing Symbols Animation */
+.bg-glowing-symbols {
+  position: relative;
+  background-color: #020617;
+  overflow: hidden;
+}
+
+.bg-glowing-symbols::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url('/assets/patterns/glowing_symbols.png');
+  background-repeat: repeat;
+  background-size: 600px;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  animation: bg-pan 60s linear infinite;
+}
+
+@keyframes bg-pan {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-10%, -10%) rotate(5deg);
+  }
+}
+
 /* Loading Animation */
 @keyframes loading {
   0% {

@@ -31,15 +31,20 @@ export default function NewsDetail() {
   };
 
   const handleShare = () => {
+    const shareTitle = article?.title || 'Campus News';
+    const shareUrl = window.location.href;
+
     if (navigator.share) {
       navigator.share({
-        title: article?.title,
-        text: article?.excerpt || article?.content?.substring(0, 100),
-        url: window.location.href,
-      }).catch(err => console.error('Share failed:', err));
+        title: shareTitle,
+        url: shareUrl,
+      }).catch(err => {
+        if (err.name !== 'AbortError') console.error('Share failed:', err);
+      });
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareTitle + ': ' + shareUrl)}`;
+      window.open(whatsappUrl, '_blank');
+      navigator.clipboard.writeText(shareUrl);
     }
   };
 

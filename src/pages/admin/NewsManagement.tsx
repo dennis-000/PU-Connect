@@ -213,6 +213,9 @@ export default function NewsManagement() {
         if (newsData.is_published && !editingNews.is_published && !editingNews.sms_sent) {
           shouldBroadcast = true;
         }
+
+        logActivity('news_updated', { title: newsData.title, id: editingNews.id });
+
       } else {
         const { error } = await supabase
           .from('campus_news')
@@ -223,6 +226,8 @@ export default function NewsManagement() {
         if (newsData.is_published) {
           shouldBroadcast = true;
         }
+
+        logActivity('news_created', { title: newsData.title, id: inserted.id });
       }
 
       if (shouldBroadcast) {
@@ -256,11 +261,18 @@ export default function NewsManagement() {
     }
   };
 
-  // Add logging helper locally for now or rely on global trigger if we had one.
-  // We'll skip manual logging for news for speed, as Auth logging was the main user complaint.
-  // But strictly speaking, we should log logging news creation to activity_logs.
-  // I'll skip it in this file to avoid complex import issues since I'm rewriting the whole file. 
-  // The Auth update covers the user's specific complaint about "no activities found" generally.
+  // Activity Logger
+  const logActivity = async (action: string, details: any) => {
+    try {
+      await supabase.from('activity_logs').insert({
+        user_id: profile?.id,
+        action_type: action,
+        action_details: details
+      });
+    } catch (err) {
+      console.error('Failed to log activity:', err);
+    }
+  };
 
   const handleEdit = (article: NewsArticle) => {
     console.log('Editing article data:', article);
@@ -319,11 +331,15 @@ export default function NewsManagement() {
 
       if (error) throw error;
 
+      logActivity('news_published', { id, status: newPublishedState ? 'published' : 'unpublished' });
+
       // Trigger SMS Broadcast if needed
       if (shouldSendSMS) {
         const sent = await broadcastNewsSMS(articleTitle);
         if (sent) alert('News published & SMS broadcast sent!');
         else alert('News published (SMS broadcast failed/skipped)');
+
+        logActivity('sms_sent', { type: 'news_broadcast', title: articleTitle });
       }
 
       await fetchNews();
@@ -548,10 +564,14 @@ export default function NewsManagement() {
                           <i className="ri-user-smile-line text-lg text-slate-300"></i>
                           {article.author?.full_name || 'Unknown'}
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <i className="ri-eye-line text-lg text-slate-300"></i>
+                        <button
+                          onClick={() => alert(`This article has ${article.views_count.toLocaleString()} views. (Detailed viewer list coming soon)`)}
+                          className="flex items-center gap-1.5 hover:text-blue-600 transition-colors cursor-pointer"
+                          title="Click to see who viewed"
+                        >
+                          <i className="ri-eye-line text-lg text-slate-300 group-hover:text-blue-400 transition-colors"></i>
                           {article.views_count.toLocaleString()}
-                        </span>
+                        </button>
                       </div>
 
                       <div className="flex items-center gap-3">

@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [allProducts, setAllProducts] = useState<(Product & { seller: Profile })[]>([]);
   const [smsHistory, setSmsHistory] = useState<SMSHistory[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [topupHistory, setTopupHistory] = useState<any[]>([]);
 
   const [stats, setStats] = useState({
     users: 0,
@@ -52,8 +53,17 @@ export default function AdminDashboard() {
     smsBalance: 0,
     smsSent: 0,
     onlineUsers: 0,
-    smsEnabled: true
+    smsEnabled: true,
+    newsletter: 0,
+    total_products: 0
   });
+
+  const [onlinePresence, setOnlinePresence] = useState<{
+    total: number;
+    buyers: number;
+    sellers: number;
+    admins: number;
+  }>({ total: 0, buyers: 0, sellers: 0, admins: 0 });
 
   const [analyticsData, setAnalyticsData] = useState<{
     faculties: { name: string, count: number }[],
@@ -62,7 +72,7 @@ export default function AdminDashboard() {
   }>({ faculties: [], departments: [], recentGrowth: [] });
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'products' | 'analytics' | 'activity' | 'sms'>('overview');
   const [processing, setProcessing] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -74,6 +84,10 @@ export default function AdminDashboard() {
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [showAddPersonModal, setShowAddPersonModal] = useState(false);
   const [newPersonData, setNewPersonData] = useState({ full_name: '', email: '', password: '', role: 'buyer' as 'buyer' | 'admin' | 'news_publisher' });
+  const [isSmsLoading, setIsSmsLoading] = useState(false);
+
+  const pendingApps = applications.filter(app => app.status?.toLowerCase() === 'pending');
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   useEffect(() => {
     if (authLoading) return;
@@ -107,7 +121,16 @@ export default function AdminDashboard() {
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
-        setStats(prev => ({ ...prev, onlineUsers: Object.keys(state).length }));
+        const onlineProfiles = Object.values(state).flat() as any[];
+
+        setOnlinePresence({
+          total: onlineProfiles.length,
+          buyers: onlineProfiles.filter(p => p.role === 'buyer').length,
+          sellers: onlineProfiles.filter(p => p.role === 'seller' || p.role === 'publisher_seller').length,
+          admins: onlineProfiles.filter(p => p.role === 'admin' || p.role === 'super_admin').length
+        });
+
+        setStats(prev => ({ ...prev, onlineUsers: onlineProfiles.length }));
       })
       .subscribe();
 
@@ -130,7 +153,6 @@ export default function AdminDashboard() {
     }
   }, [notification]);
 
-  const [isSmsLoading, setIsSmsLoading] = useState(true);
 
   const fetchSMSBalance = async (silent = false) => {
     if (!silent) setIsSmsLoading(true);
@@ -181,8 +203,8 @@ export default function AdminDashboard() {
     try {
       if (!isBackground) console.log('📊 Fetching dashboard data...');
 
-      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes] = await Promise.all([
-        supabase.from('seller_applications').select('*, profiles:user_id(*)').order('created_at', { ascending: false }).limit(50),
+      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes, newsletterRes, totalProductsRes, topupsRes] = await Promise.all([
+        supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(50),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('seller_profiles').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).in('role', ['admin', 'super_admin']),
@@ -195,13 +217,21 @@ export default function AdminDashboard() {
         supabase.from('profiles').select('faculty, department, created_at').order('created_at', { ascending: false }).limit(1000),
         supabase.from('products').select('*, seller:profiles!products_seller_id_fkey(full_name, email, phone)').order('created_at', { ascending: false }).limit(50),
         supabase.from('website_settings').select('enable_sms').single(),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'buyer')
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'buyer'),
+        supabase.from('newsletter_subscribers').select('*', { count: 'exact' }),
+        supabase.from('newsletter_subscribers').select('*', { count: 'exact' }),
+        supabase.from('products').select('id', { count: 'exact', head: true }),
+        supabase.from('sms_topups').select('*').order('created_at', { ascending: false }).limit(20)
       ]);
 
       if (logsRes.data) setRecentLogs(logsRes.data);
 
       if (allProductsRes.data) {
         setAllProducts(allProductsRes.data as any || []);
+      }
+
+      if (topupsRes.data) {
+        setTopupHistory(topupsRes.data);
       }
 
       // Handle Applications - Robust Error Handling
@@ -215,7 +245,8 @@ export default function AdminDashboard() {
       setApplications(fetchedApps as any);
 
       // Stats Calculation
-      const totalUsers = usersRes.count || 0;
+      const totalSystemUsers = (buyersRes.count || 0) + (sellersRes.count || 0) + (adminsRes.count || 0) + (publishersRes.count || 0);
+      const totalUsers = totalSystemUsers || usersRes.count || 0;
       const pendingCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'pending').length;
       const approvedCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'approved').length;
       const rejectedCount = fetchedApps.filter(a => a.status?.toLowerCase() === 'rejected').length;
@@ -236,7 +267,9 @@ export default function AdminDashboard() {
         cancelled: cancelledCount,
         news: newsRes.count || 0,
         tickets: ticketsRes.count || 0,
-        smsEnabled: settingsRes.data?.enable_sms ?? true
+        smsEnabled: settingsRes.data?.enable_sms ?? true,
+        newsletter: newsletterRes.count || (newsletterRes.data ? newsletterRes.data.length : 0),
+        total_products: totalProductsRes.count || 0
       }));
 
       // Analytics
@@ -332,6 +365,10 @@ export default function AdminDashboard() {
   const adminUpsertSellerProfile = async (targetUserId: string, businessName: string, businessCategory: string, businessLogo?: string, businessDescription?: string, contactPhone?: string, contactEmail?: string) => {
     const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     const secret = localStorage.getItem('sys_admin_secret');
+
+    // Fallback description
+    const description = businessDescription || `Welcome to ${businessName}!`;
+
     if (isBypass && secret) {
       const { error } = await supabase.rpc('admin_upsert_seller_profile', {
         target_user_id: targetUserId,
@@ -346,7 +383,7 @@ export default function AdminDashboard() {
       business_name: businessName,
       business_category: businessCategory,
       business_logo: businessLogo,
-      business_description: businessDescription,
+      business_description: businessDescription || description,
       contact_phone: contactPhone,
       contact_email: contactEmail,
       is_active: true,
@@ -359,18 +396,42 @@ export default function AdminDashboard() {
     const userId = application.user_id;
     const businessName = application.business_name;
     const businessCategory = application.business_category;
-
     setProcessing(applicationId);
 
-    // OPTIMISTIC UPDATE: Update status immediately so UI reflects change
+    // Get description from application list
+    const app = applications.find(a => a.id === applicationId);
+    const description = app?.business_description || '';
+
+    // OPTIMISTIC UPDATE
     setApplications(prev => prev.map(app =>
       app.id === applicationId ? { ...app, status: 'approved' } : app
     ));
 
     try {
       // 1. Approve Application
-      const { error: appError } = await adminUpdateApplication(applicationId, 'approved');
-      if (appError) throw appError;
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret');
+
+      if (isBypass && secret) {
+        const { error } = await supabase.rpc('admin_update_application', { app_id: applicationId, new_status: 'approved', secret_key: secret });
+        if (error) throw error;
+      } else {
+        // Standard Admin Update
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile?.id || '');
+        const reviewedBy = isValidUUID ? profile?.id : null;
+
+        const { error: appError } = await supabase
+          .from('seller_applications')
+          .update({
+            status: 'approved',
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: reviewedBy,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', applicationId);
+
+        if (appError) throw appError;
+      }
 
       // 2. Grant Seller Role (Smart Role Transition)
       const { data: currentProfile } = await supabase.from('profiles').select('role').eq('id', userId).single();
@@ -384,7 +445,7 @@ export default function AdminDashboard() {
       const { error: profileError } = await adminUpdateProfile(userId, { role: newRole });
       if (profileError) throw profileError;
 
-      // 3. Create Seller Profile Entry (if it doesn't exist)
+      // 3. Create Seller Profile Entry
       const { error: sellerProfileError } = await adminUpsertSellerProfile(
         userId,
         businessName || 'New Business',
@@ -396,7 +457,21 @@ export default function AdminDashboard() {
       );
       if (sellerProfileError) throw sellerProfileError;
 
-      // 4. Send Notification
+      // 4. Activity Logging
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: profile?.id,
+          action_type: 'application_approved',
+          action_details: {
+            business_name: businessName,
+            applicant_id: userId
+          }
+        });
+      } catch (logErr) {
+        console.error('Error logging approval:', logErr);
+      }
+
+      // 5. Send Notification
       const { data: userData } = await supabase.from('profiles').select('phone, full_name').eq('id', userId).single();
       if (userData?.phone) {
         try {
@@ -411,11 +486,17 @@ export default function AdminDashboard() {
         }
       }
 
-
-      // fetchData(true); // Rely on optimistic update to avoid race conditions
       setNotification({ type: 'success', message: 'Application approved and user promoted to Seller' });
+
+      // Ensure data consistency
+      setTimeout(() => fetchData(true), 500);
+
     } catch (err: any) {
       console.error('Approval error:', err);
+      // Revert Optimistic Update
+      setApplications(prev => prev.map(app =>
+        app.id === applicationId ? { ...app, status: 'pending' } : app
+      ));
       setNotification({ type: 'error', message: err.message || 'Failed to approve application' });
     } finally {
       setProcessing(null);
@@ -423,7 +504,10 @@ export default function AdminDashboard() {
   };
 
   const handleReject = async (applicationId: string) => {
-    if (!confirm('Reject this application?')) return;
+    // Find the application details first for logging
+    const app = applications.find(a => a.id === applicationId);
+    if (!confirm(`Reject application for ${app?.business_name}?`)) return;
+
     setProcessing(applicationId);
 
     // Optimistic Update
@@ -433,12 +517,29 @@ export default function AdminDashboard() {
 
     try {
       const { error } = await adminUpdateApplication(applicationId, 'rejected');
-
       if (error) throw error;
 
-      // fetchData(true);
+      // Log Activity
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: profile?.id,
+          action_type: 'application_rejected',
+          action_details: {
+            business_name: app?.business_name || 'Unknown',
+            applicant_id: app?.user_id
+          }
+        });
+      } catch (logErr) {
+        console.error('Error logging rejection:', logErr);
+      }
+
       setNotification({ type: 'info', message: 'Application rejected' });
+      setTimeout(() => fetchData(true), 500);
     } catch (err: any) {
+      // Revert Optimistic Update
+      setApplications(prev => prev.map(app =>
+        app.id === applicationId ? { ...app, status: 'pending' } : app
+      ));
       setNotification({ type: 'error', message: err.message });
     } finally {
       setProcessing(null);
@@ -544,11 +645,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const pendingApps = applications.filter(a => a.status?.toLowerCase() === 'pending');
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 bg-admin-pattern">
       <Navbar />
 
       {/* Real-time Status */}
@@ -593,13 +692,18 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="max-w-[1600px] mx-auto px-6 lg:px-8 pt-32 pb-20">
+      <div className="max-w-[1600px] mx-auto px-6 lg:px-8 pt-32 pb-72">
 
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
           <div>
             <h1 className="text-5xl font-black text-white mb-2 tracking-tight">Admin Dashboard</h1>
             <p className="text-slate-400 font-medium">Welcome back, <span className="text-blue-400 font-bold">{profile?.full_name}</span></p>
+            <div className="flex gap-4 mt-4">
+              <Link to="/admin/email-templates" className="text-xs font-bold text-slate-500 hover:text-white flex items-center gap-1 uppercase tracking-wider transition-colors">
+                <i className="ri-layout-3-line"></i> Email Templates
+              </Link>
+            </div>
             <p className="text-slate-500 text-sm mt-1">Last updated: {lastUpdate.toLocaleTimeString()}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -627,19 +731,242 @@ export default function AdminDashboard() {
         </div>
 
 
+
+        {/* Overview Stats Cards */}
+        {activeTab === 'overview' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              {/* Total Users Card */}
+              <Link to="/admin/users" className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-blue-500/20 transition-all group overflow-hidden relative block">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:rotate-12 transition-transform">
+                    <i className="ri-user-heart-line text-2xl"></i>
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-3xl font-black text-white">{stats.users?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Total Users</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{onlinePresence.total} Active Now</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-400">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} new</span>
+                </div>
+              </Link>
+
+              {/* Users/Buyers & Subscribers Consolidated */}
+              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-orange-500/20 transition-all group overflow-hidden relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:rotate-12 transition-transform">
+                    <i className="ri-group-line text-2xl"></i>
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-3xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Total Buyers</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Newsletter</p>
+                    <p className="text-lg font-black text-white">{stats.newsletter?.toLocaleString() || '0'}</p>
+                  </div>
+                  <Link to="/admin/newsletter" className="p-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white transition-all">
+                    <i className="ri-mail-send-line"></i>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Sellers Card */}
+              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-emerald-500/20 transition-all group relative overflow-hidden">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <i className="ri-store-2-line text-2xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-black text-white leading-none">{stats.sellers?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">Total Sellers</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partners</p>
+                    <span className="text-[10px] font-bold text-blue-400 flex items-center gap-1">
+                      {stats.pending} Pending
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Analytics Card */}
+              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-purple-500/20 transition-all group relative overflow-hidden">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+                    <i className="ri-box-3-line text-2xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-black text-white leading-none">{stats.total_products?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">Total Products</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inventory</p>
+                    <span className="text-[10px] font-bold text-emerald-400">
+                      {stats.products_count?.toLocaleString() || '0'} Live
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Overview & Status Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-900/50 rounded-2xl p-6 border border-white/5 backdrop-blur-xl relative overflow-hidden group">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                      <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em]">Presence Terminal • LIVE</p>
+                    </div>
+                    <h4 className="text-3xl font-black text-white flex items-center gap-2">
+                      {onlinePresence.total}
+                      <span className="text-xs font-medium text-slate-400">Online Now</span>
+                    </h4>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Buyers</p>
+                      <p className="text-xl font-black text-white">{onlinePresence.buyers}</p>
+                    </div>
+                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Sellers</p>
+                      <p className="text-xl font-black text-white">{onlinePresence.sellers}</p>
+                    </div>
+                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Admins</p>
+                      <p className="text-xl font-black text-white">{onlinePresence.admins}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-600/10 transition-colors"></div>
+              </div>
+
+              <div className="bg-slate-900/50 rounded-2xl p-6 border border-white/5 backdrop-blur-xl grid grid-cols-3 gap-4">
+                <div className="flex flex-col justify-center">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Buyers</p>
+                  <p className="text-2xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</p>
+                </div>
+                <div className="flex flex-col justify-center border-x border-white/5 px-4">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admins</p>
+                  <p className="text-2xl font-black text-emerald-400">{stats.admins?.toLocaleString() || '0'}</p>
+                </div>
+                <div className="flex flex-col justify-center pl-4">
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Publishers</p>
+                  <p className="text-2xl font-black text-purple-400">{stats.publishers?.toLocaleString() || '0'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Platform Composition Breakdown */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-blue-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                    <i className="ri-box-3-line"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Products</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.products_count?.toLocaleString() || '0'}</p>
+              </div>
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-indigo-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                    <i className="ri-customer-service-line"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Services</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.services_count?.toLocaleString() || '0'}</p>
+              </div>
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-purple-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
+                    <i className="ri-vip-crown-line"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Entities</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.users?.toLocaleString() || '0'}</p>
+              </div>
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-emerald-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <i className="ri-shield-user-line"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">System Admins</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.admins?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+
+            {/* System News & Support row */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-blue-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                    <i className="ri-newspaper-line"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">News Articles</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.news?.toLocaleString() || '0'}</p>
+              </div>
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-orange-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                    <i className="ri-customer-service-2-line"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Open Tickets</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.tickets?.toLocaleString() || '0'}</p>
+              </div>
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 hover:border-pink-500/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-400">
+                    <i className="ri-send-plane-fill"></i>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SMS Sent</p>
+                </div>
+                <p className="text-2xl font-black text-white">{stats.smsSent?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* PROMINENT ALERTS - SMS & Pending Applications */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-          {/* SMS Balance Alert */}
-          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 ${isSmsLoading
+          {/* SMS Balance Alert / System Status Reflection */}
+          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 flex flex-col justify-between ${isSmsLoading
             ? 'bg-slate-800/50 border-slate-700/50'
-            : stats.smsBalance < 50
-              ? 'bg-gradient-to-br from-rose-600/20 to-rose-700/20 border-rose-500/50'
-              : 'bg-gradient-to-br from-violet-600/20 to-violet-700/20 border-violet-500/50'
+            : !stats.smsEnabled
+              ? 'bg-slate-800/50 border-slate-700 grayscale'
+              : stats.smsBalance < 50
+                ? 'bg-gradient-to-br from-rose-600/20 to-rose-700/20 border-rose-500/50'
+                : 'bg-gradient-to-br from-violet-600/20 to-violet-700/20 border-violet-500/50'
             }`}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
+            {!stats.smsEnabled && (
+              <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center p-6">
+                <i className="ri-error-warning-line text-4xl text-slate-400 mb-2"></i>
+                <div className="px-4 py-1.5 bg-slate-800 rounded-full border border-white/10 text-[10px] font-black text-slate-300 uppercase tracking-widest shadow-2xl">
+                  SMS System Offline
+                </div>
+                <p className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Notifications Disabled</p>
+              </div>
+            )}
+
+            <div className="relative flex-1">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
                   <div className={`w-14 h-14 rounded-xl ${isSmsLoading
                     ? 'bg-slate-700/50'
                     : stats.smsBalance < 50 ? 'bg-rose-500/20' : 'bg-violet-500/20'
@@ -650,63 +977,50 @@ export default function AdminDashboard() {
                       <i className={`ri-message-3-line text-3xl ${stats.smsBalance < 50 ? 'text-rose-400' : 'text-violet-400'}`}></i>
                     )}
                   </div>
+                  <div>
+                    <h4 className="text-3xl font-black text-white">{isSmsLoading ? '...' : (stats.smsBalance?.toLocaleString() || '0')}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMS Balance</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">SMS Balance</p>
-                  {isSmsLoading ? (
-                    <div className="h-10 w-24 bg-slate-700/50 rounded-lg mt-1 animate-pulse"></div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <p className={`text-4xl font-black ${stats.smsBalance < 50 ? 'text-rose-400' : 'text-violet-400'}`}>
-                        {stats.smsBalance.toLocaleString()} <span className="text-lg text-slate-500 font-bold">Credits</span>
-                      </p>
-                      {!stats.smsEnabled && (
-                        <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[10px] font-bold uppercase tracking-widest border border-rose-500/30">
-                          Disabled
-                        </span>
-                      )}
-                    </div>
-                  )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSMS}
+                    className={`px-4 py-2 rounded-xl font-bold text-xs transition-all border ${stats.smsEnabled
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                      }`}
+                  >
+                    System: {stats.smsEnabled ? 'ON' : 'OFF'}
+                  </button>
+                  <Link
+                    to="/admin/sms"
+                    className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/5"
+                  >
+                    <i className="ri-history-line"></i>
+                  </Link>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleSMS}
-                  className={`px-3 py-3 rounded-xl font-bold text-xs transition-all border ${stats.smsEnabled
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
-                    }`}
-                  title={stats.smsEnabled ? "Click to Disable SMS" : "Click to Enable SMS"}
-                >
-                  {stats.smsEnabled ? 'ON' : 'OFF'}
-                </button>
-
-                <Link
-                  to="/admin/sms"
-                  className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex-1 text-center ${isSmsLoading
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                    : stats.smsBalance < 50
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/20'
-                      : 'bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/20'
-                    }`}
-                  onClick={(e) => isSmsLoading && e.preventDefault()}
-                >
-                  {stats.smsBalance < 50 ? 'Top Up Now' : 'View History'}
-                </Link>
-              </div>
-
-              {!isSmsLoading && stats.smsBalance < 50 && (
-                <div className="flex items-center gap-2 text-rose-300 text-sm font-bold animate-in fade-in slide-in-from-top-1 mt-4">
-                  <i className="ri-alert-line animate-pulse"></i>
-                  <span>Low balance! Please top up to continue sending messages.</span>
+              {!isSmsLoading && stats.smsBalance < 50 && stats.smsEnabled && (
+                <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold uppercase tracking-wide mb-4">
+                  <i className="ri-error-warning-fill text-lg"></i>
+                  <span>Low Credit Balance - Top up soon</span>
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Arkesel Credits Available</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${stats.smsEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stats.smsEnabled ? 'Functional' : 'Halted'}</span>
+              </div>
             </div>
           </div>
 
           {/* Pending Applications Alert */}
-          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 ${pendingApps.length > 0
+          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 flex flex-col justify-between ${pendingApps.length > 0
             ? 'bg-gradient-to-br from-amber-600/20 to-amber-700/20 border-amber-500/50'
             : 'bg-gradient-to-br from-emerald-600/20 to-emerald-700/20 border-emerald-500/50'
             }`}>
@@ -718,10 +1032,8 @@ export default function AdminDashboard() {
                     <i className={`ri-file-list-3-line text-3xl ${pendingApps.length > 0 ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}></i>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Applications</p>
-                    <p className={`text-4xl font-black ${pendingApps.length > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                      {pendingApps.length}
-                    </p>
+                    <h4 className="text-3xl font-black text-white">{pendingApps.length}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending Applications</p>
                   </div>
                 </div>
                 {pendingApps.length > 0 ? (
@@ -741,7 +1053,7 @@ export default function AdminDashboard() {
               {pendingApps.length > 0 && (
                 <div className="flex items-center gap-2 text-amber-300 text-sm font-bold">
                   <i className="ri-notification-3-line animate-pulse"></i>
-                  <span>{pendingApps.length} seller application{pendingApps.length !== 1 ? 's' : ''} awaiting your review</span>
+                  <span>{pendingApps.length} seller application{pendingApps.length !== 1 ? 's' : ''} awaiting review</span>
                 </div>
               )}
             </div>
@@ -749,29 +1061,6 @@ export default function AdminDashboard() {
         </div>
 
 
-        {/* Stats Grid - User Roles */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
-          {[
-            { label: 'Total Users', value: stats.users, icon: 'ri-group-line', gradient: 'from-blue-600 to-blue-700', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-400' },
-            { label: 'Total Admins', value: stats.admins, icon: 'ri-shield-user-line', gradient: 'from-emerald-600 to-emerald-700', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-400' },
-            { label: 'Total Buyers', value: stats.buyers, icon: 'ri-shopping-cart-line', gradient: 'from-cyan-600 to-cyan-700', iconBg: 'bg-cyan-500/10', iconColor: 'text-cyan-400' },
-            { label: 'Total Sellers', value: stats.sellers, icon: 'ri-store-2-line', gradient: 'from-violet-600 to-violet-700', iconBg: 'bg-violet-500/10', iconColor: 'text-violet-400' },
-            { label: 'News Publishers', value: stats.publishers, icon: 'ri-quill-pen-line', gradient: 'from-purple-600 to-purple-700', iconBg: 'bg-purple-500/10', iconColor: 'text-purple-400' }
-          ].map((stat, i) => (
-            <div key={i} className="group relative overflow-hidden bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 hover:border-slate-600 transition-all">
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-5 transition-opacity`}></div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl ${stat.iconBg} flex items-center justify-center ${stat.iconColor} group-hover:scale-110 transition-transform`}>
-                    <i className={`${stat.icon} text-lg`}></i>
-                  </div>
-                  <div className={`text-2xl font-black ${stat.iconColor}`}>{stat.value.toLocaleString()}</div>
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
 
         {/* Tabbed Navigation */}
         <div className="flex border-b border-slate-700/50 mb-8 overflow-x-auto">
@@ -780,7 +1069,8 @@ export default function AdminDashboard() {
             { id: 'applications', label: 'Applications', icon: 'ri-file-list-3-line', badge: pendingApps.length },
             { id: 'products', label: 'Products', icon: 'ri-shopping-bag-3-line' },
             { id: 'analytics', label: 'Analytics', icon: 'ri-line-chart-line' },
-            { id: 'activity', label: 'Activity', icon: 'ri-history-line' }
+            { id: 'activity', label: 'Activity', icon: 'ri-history-line' },
+            { id: 'sms', label: 'SMS & Credits', icon: 'ri-message-3-line' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -814,14 +1104,14 @@ export default function AdminDashboard() {
                       { label: 'Applications', path: '/admin/seller-applications', icon: 'ri-file-list-3-line', color: 'amber', badge: pendingApps.length },
                       { label: 'Registered Sellers', path: '/admin/sellers', icon: 'ri-store-2-line', color: 'green' },
                       { label: 'News', path: '/admin/news', icon: 'ri-newspaper-line', color: 'emerald' },
-                      { label: 'Newsletter', path: '/admin/newsletter', icon: 'ri-mail-send-line', color: 'cyan' },
+                      { label: 'Email Subscribers', path: '/admin/newsletter', icon: 'ri-mail-send-line', color: 'cyan' },
                       { label: 'CMS', path: '/admin/content', icon: 'ri-pages-line', color: 'indigo' },
                       { label: 'SMS', path: '/admin/sms', icon: 'ri-message-3-line', color: 'violet' },
                       { label: 'Messages', path: '/admin/messages', icon: 'ri-chat-3-line', color: 'pink' },
                       { label: 'Support', path: '/admin/support', icon: 'ri-customer-service-2-line', color: 'orange', badge: stats.tickets },
                       { label: 'Ads', path: '/admin/ads', icon: 'ri-advertisement-line', color: 'rose' },
                       { label: 'Polls', path: '/admin/polls', icon: 'ri-bar-chart-box-line', color: 'teal' },
-                      { label: 'Subscriptions', path: '/admin/subscriptions', icon: 'ri-vip-crown-line', color: 'yellow' },
+                      { label: 'Platform Subs', path: '/admin/subscriptions', icon: 'ri-vip-crown-line', color: 'yellow' },
                       { label: 'Activity', path: '/admin/activity', icon: 'ri-pulse-line', color: 'red' },
                       { label: 'Roles', path: '/admin/roles', icon: 'ri-admin-line', color: 'purple' },
                       { label: 'Settings', path: '/admin/settings', icon: 'ri-settings-4-line', color: 'slate' }
@@ -845,7 +1135,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 relative overflow-hidden">
                     <i className="ri-customer-service-2-line absolute -right-4 -bottom-4 text-white/10 text-8xl"></i>
                     <div className="relative">
@@ -860,6 +1150,14 @@ export default function AdminDashboard() {
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">News Articles</p>
                       <div className="text-4xl font-black text-blue-400 mb-1">{stats.news}</div>
                       <Link to="/admin/news" className="text-xs font-bold text-slate-400 hover:text-white transition-colors">Manage →</Link>
+                    </div>
+                  </div>
+                  <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                    <i className="ri-shopping-bag-3-line absolute -right-4 -bottom-4 text-white/5 text-8xl"></i>
+                    <div className="relative">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Products</p>
+                      <div className="text-4xl font-black text-emerald-400 mb-1">{stats.products_count + stats.services_count}</div>
+                      <button onClick={() => setActiveTab('products')} className="text-xs font-bold text-slate-400 hover:text-white transition-colors text-left">Manage →</button>
                     </div>
                   </div>
                 </div>
@@ -987,6 +1285,13 @@ export default function AdminDashboard() {
                         title={product.is_active ? 'Deactivate Product' : 'Activate Product'}
                       >
                         {processing === product.id ? <i className="ri-loader-4-line animate-spin"></i> : (product.is_active ? 'Hide' : 'Show')}
+                      </button>
+                      <button
+                        onClick={() => navigate(`/seller/edit-product/${product.id}`)}
+                        className="px-4 py-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-xl font-bold text-xs uppercase transition-all"
+                        title="Edit Product Details"
+                      >
+                        Edit
                       </button>
                       <button
                         onClick={() => handleProductDelete(product.id)}
@@ -1163,6 +1468,128 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {activeTab === 'sms' && (
+            <div className="space-y-8">
+              {/* SMS Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400">
+                      <i className="ri-message-3-line text-2xl"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Sent</p>
+                      <p className="text-2xl font-black text-white">{stats.smsSent?.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                      <i className="ri-wallet-3-line text-2xl"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Credits</p>
+                      <p className="text-2xl font-black text-white">{stats.smsBalance?.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 flex flex-col justify-center">
+                  <Link to="/admin/sms" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm uppercase tracking-wider text-center transition-all shadow-lg shadow-blue-500/20">
+                    Open SMS Console <i className="ri-arrow-right-line ml-2"></i>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Sent History */}
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Recent Broadcasts</h3>
+                    <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">LAST 10</div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-900/50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Message</th>
+                          <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipients</th>
+                          <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {smsHistory.length === 0 ? (
+                          <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No SMS history found</td></tr>
+                        ) : (
+                          smsHistory.map((log) => (
+                            <tr key={log.id} className="hover:bg-slate-700/20 transition-colors">
+                              <td className="px-6 py-4">
+                                <p className="text-xs font-medium text-slate-300 line-clamp-2" title={(log.details as any)?.message || (log as any)?.action_details?.message}>
+                                  {(log.details as any)?.message || (log as any)?.action_details?.message || 'Message content unavailable'}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold rounded">
+                                  {(log.details as any)?.recipient_count || (log as any)?.action_details?.recipient_count || 1}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right text-[10px] text-slate-500 font-mono">
+                                {new Date(log.created_at).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Topup History */}
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Credit Purchase History</h3>
+                    <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">RECENT</div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-900/50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Units</th>
+                          <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {topupHistory.length === 0 ? (
+                          <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No purchase history found</td></tr>
+                        ) : (
+                          topupHistory.map((topup) => (
+                            <tr key={topup.id} className="hover:bg-slate-700/20 transition-colors">
+                              <td className="px-6 py-4 text-[10px] text-slate-400 font-mono">
+                                {new Date(topup.created_at).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs font-black text-white">{topup.units?.toLocaleString()}</span>
+                                <span className="text-[10px] text-slate-500 ml-1">UNITS</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded ${topup.status === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
+                                    topup.status === 'failed' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'
+                                  }`}>
+                                  {topup.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         {/* Access Manager Modal */}
         {
@@ -1233,7 +1660,7 @@ export default function AdminDashboard() {
             </div>
           )
         }
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

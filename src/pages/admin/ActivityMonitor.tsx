@@ -87,6 +87,12 @@ export default function ActivityMonitor() {
       case 'message_sent': return 'ri-message-line';
       case 'sms_sent': return 'ri-message-2-line';
       case 'application_submitted': return 'ri-file-list-line';
+      case 'application_approved': return 'ri-checkbox-circle-line';
+      case 'application_rejected': return 'ri-close-circle-line';
+      case 'news_created': return 'ri-article-line';
+      case 'news_updated': return 'ri-edit-2-line';
+      case 'news_published': return 'ri-send-plane-fill';
+      case 'news_deleted': return 'ri-delete-bin-2-line';
       default: return 'ri-information-line';
     }
   };
@@ -100,6 +106,13 @@ export default function ActivityMonitor() {
       case 'product_deleted': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400';
       case 'message_sent': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
       case 'sms_sent': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400';
+      case 'application_submitted': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'application_approved': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'application_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'news_created': return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400';
+      case 'news_updated': return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400';
+      case 'news_published': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400';
+      case 'news_deleted': return 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400';
       default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
     }
   };
@@ -133,9 +146,15 @@ export default function ActivityMonitor() {
             {[
               { id: 'all', label: 'All History' },
               { id: 'login', label: 'Login History' },
+              { id: 'application_submitted', label: 'New Applications' },
+              { id: 'application_approved', label: 'Approved Applications' },
+              { id: 'application_rejected', label: 'Rejected Applications' },
               { id: 'product_created', label: 'Product History' },
               { id: 'sms_sent', label: 'SMS History' },
-              { id: 'message_sent', label: 'Message History' }
+              { id: 'message_sent', label: 'Message History' },
+              { id: 'news_created', label: 'News Created' },
+              { id: 'news_updated', label: 'News Updated' },
+              { id: 'news_published', label: 'News Published' }
             ].map(filter => (
               <button
                 key={filter.id}

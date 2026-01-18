@@ -90,7 +90,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true, // Listen on all addresses, including LAN and public IPs
-    strictPort: true,
+    strictPort: false,
     hmr: {
       clientPort: 3000,
     },

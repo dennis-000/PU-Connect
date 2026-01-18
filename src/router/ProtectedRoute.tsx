@@ -30,10 +30,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
     // If specific roles are required and the user doesn't have the permission
     if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-        // SMART REDIRECT: If a buyer is trying to access a seller route, send them to status page
-        if (profile.role === 'buyer' && location.pathname.startsWith('/seller')) {
-            return <Navigate to="/seller/status" replace />;
-        }
+        // Redirect to a specific dashboard or just the home page based on their actual role
 
         // For other unauthorized access, show the Access Denied screen
         return (

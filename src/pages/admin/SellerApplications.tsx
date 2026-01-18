@@ -177,7 +177,22 @@ export default function SellerApplications({ isEmbedded = false }: SellerApplica
         }
       }
 
-      setNotification({ type: 'success', message: 'Application approved successfully!' });
+      // Log Activity
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: profile?.id, // Admin performed the action
+          action_type: 'application_approved',
+          action_details: {
+            business_name: application.business_name,
+            applicant_id: application.user_id,
+            applicant_name: application.profiles?.full_name
+          }
+        });
+      } catch (logErr) {
+        console.error('Error logging approval:', logErr);
+      }
+
+      setNotification({ type: 'success', message: 'Application approved successfully! SMS notification sent.' });
       // The real-time subscription will also catch this, but we fetch to be safe
       fetchApplications();
     } catch (error: any) {
@@ -259,6 +274,21 @@ export default function SellerApplications({ isEmbedded = false }: SellerApplica
         .eq('id', selectedApp.id);
 
       if (error) throw error;
+
+      // Log Activity
+      try {
+        await supabase.from('activity_logs').insert({
+          user_id: profile?.id,
+          action_type: 'application_rejected',
+          action_details: {
+            business_name: selectedApp.business_name,
+            reason: rejectionReason,
+            applicant_name: selectedApp.profiles?.full_name
+          }
+        });
+      } catch (logErr) {
+        console.error('Error logging rejection:', logErr);
+      }
 
       // If Revoking an approved app, cleanup
       if (selectedApp.status === 'approved' && !isDummy) {

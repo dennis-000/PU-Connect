@@ -59,10 +59,28 @@ export default function NewsletterSubscribers() {
                     </div>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => window.history.back()}
-                            className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                            onClick={() => {
+                                const emails = subscribers.map(s => s.email).join(',');
+                                navigator.clipboard.writeText(emails);
+                                alert('Emails copied to clipboard!');
+                            }}
+                            className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2"
                         >
-                            Back
+                            <i className="ri-file-copy-line"></i>
+                            Copy CSV
+                        </button>
+                        <button
+                            onClick={() => navigate('/admin/email-templates')}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2"
+                        >
+                            <i className="ri-mail-send-line"></i>
+                            Compose Blast
+                        </button>
+                        <button
+                            onClick={() => window.history.back()}
+                            className="w-12 h-12 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                        >
+                            <i className="ri-arrow-left-line text-lg"></i>
                         </button>
                     </div>
                 </div>

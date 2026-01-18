@@ -38,6 +38,7 @@ const Support = lazy(() => import('../pages/support/Support'));
 const Internships = lazy(() => import('../pages/internships/Internships'));
 const SupportTickets = lazy(() => import('../pages/admin/SupportTickets'));
 const PollManagement = lazy(() => import('../pages/admin/PollManagement'));
+const EmailTemplates = lazy(() => import('../pages/admin/EmailTemplates'));
 const SellersList = lazy(() => import('../pages/admin/SellersList'));
 
 const routes: RouteObject[] = [
@@ -275,6 +276,14 @@ const routes: RouteObject[] = [
     element: (
       <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
         <PollManagement />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/email-templates',
+    element: (
+      <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+        <EmailTemplates />
       </ProtectedRoute>
     ),
   },

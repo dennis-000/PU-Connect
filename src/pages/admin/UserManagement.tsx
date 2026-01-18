@@ -1,28 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase, type Profile } from '../../lib/supabase';
 import { useCreateConversation } from '../../hooks/useConversations';
+import { getOptimizedImageUrl } from '../../lib/imageOptimization';
 
 import Navbar from '../../components/feature/Navbar';
 
-type User = {
-  id: string;
-  email: string;
-  full_name: string;
-  student_id: string | null;
-  department: string | null;
-  faculty: string | null;
-  phone: string | null;
-  avatar_url: string | null;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  last_sign_in_at?: string;
-};
+type User = Profile;
 
 export default function UserManagement() {
   const navigate = useNavigate();
+  const { profile, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    console.log('🛡️ UserManagement Component Mounted');
+    console.log('👤 Current Profile:', profile);
+    console.log('🔑 Bypass Active:', localStorage.getItem('sys_admin_bypass') === 'true');
+  }, [profile]);
+
   const { mutate: createConversation } = useCreateConversation();
 
   const handleMessageUser = (userId: string) => {
@@ -39,15 +35,21 @@ export default function UserManagement() {
     );
   };
 
-  const { profile, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const USERS_PER_PAGE = 20;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   // Add User State
   const [newData, setNewData] = useState({
@@ -76,30 +78,80 @@ export default function UserManagement() {
   const [saving, setSaving] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
+  // Role check handled by ProtectedRoute
+
+  // Debounced search/filter
   useEffect(() => {
-    if (!authLoading && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
-      navigate('/marketplace');
-    }
-  }, [profile, authLoading, navigate]);
+    const timer = setTimeout(() => {
+      fetchUsers(0, true);
+      fetchTotalCount();
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, roleFilter]);
 
   useEffect(() => {
-    fetchUsers();
-
+    // Profiles change subscription
     const channel = supabase
       .channel('public:profiles')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
-          fetchUsers();
+          // Instead of fetching all, we might want to just refresh the current view
+          // but for simplicity, we'll reload the first page if many changes happen
+          // or just refresh the count.
+          fetchTotalCount();
         }
       )
       .subscribe();
 
+    // Presence subscription
+    const presenceChannel = supabase.channel('online-presence');
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const onlineIds = new Set<string>();
+        Object.values(state).flat().forEach((p: any) => {
+          if (p.id) onlineIds.add(p.id);
+        });
+        setOnlineUsers(onlineIds);
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(presenceChannel);
     };
   }, []);
+
+  const fetchTotalCount = async () => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+
+    try {
+      if (isBypass && secret) {
+        const { data, error } = await supabase.rpc('admin_get_profiles_count', {
+          secret_key: secret,
+          p_search: searchTerm,
+          p_role: roleFilter
+        });
+        if (!error && data !== null) setTotalCount(data);
+      } else {
+        let query = supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        if (roleFilter !== 'all') query = query.eq('role', roleFilter);
+        if (searchTerm) query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,student_id.ilike.%${searchTerm}%`);
+
+        const { count, error } = await query;
+        if (!error && count !== null) setTotalCount(count);
+      }
+    } catch (err) {
+      console.error('Error fetching count:', err);
+    }
+  };
 
   const adminHideAllProducts = async (targetUserId: string) => {
     const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
@@ -111,20 +163,66 @@ export default function UserManagement() {
     return await supabase.from('products').update({ is_active: false }).eq('seller_id', targetUserId);
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (pageToFetch = 0, isInitial = false) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret');
+
+      let query;
+
+      if (isBypass && secret) {
+        console.log('Using System Admin RPC for fetching users');
+        query = supabase.rpc('admin_get_profiles', {
+          secret_key: secret,
+          p_limit: USERS_PER_PAGE,
+          p_offset: pageToFetch * USERS_PER_PAGE,
+          p_search: searchTerm,
+          p_role: roleFilter
+        });
+      } else {
+        let baseQuery = supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (roleFilter !== 'all') baseQuery = baseQuery.eq('role', roleFilter);
+        if (searchTerm) {
+          baseQuery = baseQuery.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,student_id.ilike.%${searchTerm}%`);
+        }
+
+        query = baseQuery.range(pageToFetch * USERS_PER_PAGE, (pageToFetch + 1) * USERS_PER_PAGE - 1);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
-      setUsers(data || []);
+
+      if (isInitial) {
+        setUsers(data || []);
+      } else {
+        setUsers(prev => [...prev, ...(data || [])]);
+      }
+
+      setHasMore((data || []).length === USERS_PER_PAGE);
+      setPage(pageToFetch);
     } catch (error) {
       console.error('Error fetching users:', error);
+      alert('Failed to load users. Please check your permissions.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchUsers(page + 1);
     }
   };
 
@@ -190,17 +288,17 @@ export default function UserManagement() {
         body: { userId }
       });
 
-      if (error || !data?.success) {
-        setUsers(previousUsers);
-        throw error || new Error(data?.error || 'Failed to delete user');
-      }
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to delete user');
 
       setOpenDropdown(null);
-      alert('User account and profile permanently deleted');
-      fetchUsers();
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      setTotalCount(prev => prev - 1);
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      alert(`Failed to delete user: ${error.message}`);
+      setUsers(previousUsers); // Revert
+      alert(`Failed to delete user: ${error.message || 'System error. Check permissions.'}`);
     }
   };
 
@@ -224,7 +322,6 @@ export default function UserManagement() {
         if (roleError) console.error('Failed to update role:', roleError);
       }
 
-      alert('User created successfully and auto-confirmed!');
       setShowAddModal(false);
       setNewData({
         email: '',
@@ -235,9 +332,13 @@ export default function UserManagement() {
         phone: '',
         role: 'buyer'
       });
-      fetchUsers();
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      fetchUsers(0, true);
+      fetchTotalCount();
     } catch (err: any) {
-      alert(err.message || 'Failed to create user');
+      console.error('Add User error:', err);
+      alert(err.message || 'Failed to create user. Check if Edge Functions are enabled.');
     } finally {
       setSaving(false);
     }
@@ -254,7 +355,7 @@ export default function UserManagement() {
       phone: user.phone || '',
       email: user.email,
       created_at: user.created_at,
-      last_sign_in_at: user.last_sign_in_at || ''
+      last_sign_in_at: (user as any).last_sign_in_at || ''
     });
     setShowEditModal(true);
     setOpenDropdown(null);
@@ -307,81 +408,145 @@ export default function UserManagement() {
       if (selectedUser.role !== editData.role && editData.phone) {
         try {
           const { sendSMS } = await import('../../lib/arkesel');
-          const firstName = selectedUser.full_name.split(' ')[0];
+          const firstName = (selectedUser.full_name || 'User').split(' ')[0];
           const smsMessage = `Hi ${firstName}, your role on Campus Connect has been updated to "${editData.role.replace('_', ' ')}".`;
 
           await sendSMS([editData.phone], smsMessage);
-        } catch (smsErr) {
+          setShowSuccessToast(true);
+        } catch (smsErr: any) {
           console.error('Failed to send role update SMS:', smsErr);
+          alert(`Role updated, but SMS failed: ${smsErr.message || 'Check Arkesel settings'}`);
         }
       }
 
-      await fetchUsers();
+      fetchUsers(0, true);
       setShowEditModal(false);
       setSelectedUser(null);
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Failed to update user profile');
+      alert(`Failed to update user profile: ${error.message || 'Permission denied'}`);
     } finally {
       setSaving(false);
     }
   };
 
-  const [showExportMenu, setShowExportMenu] = useState(false);
-
-  const handleExportData = (category?: string) => {
-    let usersToExport = users;
-    if (category) {
-      usersToExport = users.filter(u => u.role === category);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportConfig, setExportConfig] = useState({
+    format: 'csv' as 'csv' | 'pdf',
+    columns: {
+      email: true,
+      full_name: true,
+      department: true,
+      faculty: true,
+      role: true,
+      status: true,
+      joined: true,
+      phone: false
     }
-    if (usersToExport.length === 0) {
-      alert('No users found for this category');
-      return;
-    }
-    const csvContent = [
-      ['Email', 'Full Name', 'Department', 'Faculty', 'Role', 'Status', 'Joined'],
-      ...usersToExport.map(user => [
-        `"${user.email}"`,
-        `"${user.full_name}"`,
-        `"${user.department || ''}"`,
-        `"${user.faculty || ''}"`,
-        user.role,
-        user.is_active ? 'Active' : 'Suspended',
-        new Date(user.created_at).toLocaleDateString()
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pentvars-users-${category || 'all'}.csv`;
-    a.click();
-    setShowExportMenu(false);
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch =
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.student_id && user.student_id.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-
-    return matchesSearch && matchesRole;
   });
 
-  // Mock function to determine online status
+  const handleExport = async () => {
+    let usersToExport = users;
+    // Apply current filters if needed, or export all? usually export matches view
+    if (roleFilter !== 'all') {
+      usersToExport = users.filter(u => u.role === roleFilter);
+    }
+
+    // Filter by search
+    if (searchTerm) {
+      usersToExport = usersToExport.filter(u =>
+        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (usersToExport.length === 0) {
+      alert('No data to export based on current filters.');
+      return;
+    }
+
+    const headers: string[] = [];
+    const keys: string[] = [];
+
+    if (exportConfig.columns.full_name) { headers.push('Full Name'); keys.push('full_name'); }
+    if (exportConfig.columns.email) { headers.push('Email'); keys.push('email'); }
+    if (exportConfig.columns.phone) { headers.push('Phone'); keys.push('phone'); }
+    if (exportConfig.columns.role) { headers.push('Role'); keys.push('role'); }
+    if (exportConfig.columns.department) { headers.push('Department'); keys.push('department'); }
+    if (exportConfig.columns.faculty) { headers.push('Faculty'); keys.push('faculty'); }
+    if (exportConfig.columns.status) { headers.push('Status'); keys.push('is_active'); }
+    if (exportConfig.columns.joined) { headers.push('Joined Date'); keys.push('created_at'); }
+
+    if (exportConfig.format === 'csv') {
+      const csvContent = [
+        headers.join(','),
+        ...usersToExport.map(user => keys.map(key => {
+          let val = (user as any)[key];
+          if (key === 'created_at') val = new Date(val).toLocaleDateString();
+          if (key === 'is_active') val = val ? 'Active' : 'Suspended';
+          if (val === null || val === undefined) val = '';
+          return `"${val}"`;
+        }).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    } else {
+      // PDF Export - Temporarily Disabled due to build issues
+      /*
+      try {
+        const jsPDF = (await import('jspdf')).default;
+        const autoTable = (await import('jspdf-autotable')).default;
+
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text('User Report', 14, 22);
+        doc.setFontSize(11);
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 30);
+
+        const tableData = usersToExport.map(user => keys.map(key => {
+          let val = (user as any)[key];
+          if (key === 'created_at') val = new Date(val).toLocaleDateString();
+          if (key === 'is_active') val = val ? 'Active' : 'Suspended';
+          if (val === null || val === undefined) val = '';
+          return val;
+        }));
+
+        autoTable(doc, {
+          head: [headers],
+          body: tableData,
+          startY: 40,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [37, 99, 235] } // Blue 600
+        });
+
+        doc.save(`users_export_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (err) {
+        console.error('PDF Generation failed:', err);
+        alert('Failed to generate PDF. Please ensure libraries are loaded.');
+      }
+      */
+      alert('PDF Export is temporarily unavailable. Please use CSV export.');
+    }
+    setShowExportModal(false);
+  };
+
+  const filteredUsers = users;
+
   const isUserOnline = (user: User) => {
-    // In a real app, check `last_seen_at > 5 mins ago`.
-    // Here we'll just mock it based on even/odd ID char or `is_active` for visual variance
-    return user.is_active && (user.id.charCodeAt(0) % 3 === 0);
+    if (!user || !user.id) return false;
+    return onlineUsers.has(user.id);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300 pb-20 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 bg-african-pattern transition-colors duration-300 pb-20 font-sans relative overflow-hidden">
       <Navbar />
 
       <div className="pt-28 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -397,7 +562,7 @@ export default function UserManagement() {
               Users
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Manage platform accounts, permissions, and view user details.
+              Manage platform accounts, permissions, and view user details ({totalCount} total)
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -417,27 +582,85 @@ export default function UserManagement() {
             </button>
             <div className="relative">
               <button
-                onClick={() => setShowExportMenu(!showExportMenu)}
+                onClick={() => setShowExportModal(true)}
                 className="px-5 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm cursor-pointer flex items-center gap-2"
               >
                 <i className="ri-download-line text-lg"></i>
                 Export
               </button>
-              {showExportMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)}></div>
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-20 overflow-hidden">
-                    {['all', 'buyer', 'seller', 'news_publisher', 'publisher_seller', 'admin'].map(opt => (
-                      <button key={opt} onClick={() => handleExportData(opt === 'all' ? undefined : opt)} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 capitalize">
-                        {opt.replace('_', ' ')} Users
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Export Modal */}
+        {showExportModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl p-8 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white">Export Data</h3>
+                  <p className="text-sm text-slate-500 font-medium">Select columns and format</p>
+                </div>
+                <button onClick={() => setShowExportModal(false)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3 block">Columns to Include</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(exportConfig.columns).map(([key, checked]) => (
+                      <label key={key} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer select-none">
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${checked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
+                          {checked && <i className="ri-check-line"></i>}
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={checked}
+                          onChange={() => setExportConfig(prev => ({
+                            ...prev,
+                            columns: { ...prev.columns, [key]: !checked }
+                          }))}
+                        />
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">{key.replace('_', ' ')}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3 block">Export Format</label>
+                  <div className="flex gap-4">
+                    {['csv', 'pdf'].map(format => (
+                      <button
+                        key={format}
+                        onClick={() => setExportConfig(prev => ({ ...prev, format: format as 'csv' | 'pdf' }))}
+                        className={`flex-1 p-4 rounded-xl border-2 font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${exportConfig.format === format
+                          ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
+                          : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-slate-300'
+                          }`}
+                      >
+                        <i className={format === 'csv' ? 'ri-file-excel-2-line text-lg' : 'ri-file-pdf-line text-lg'}></i>
+                        {format}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    onClick={handleExport}
+                    className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+                  >
+                    Download Export
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-8 border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -483,73 +706,114 @@ export default function UserManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {filteredUsers.map((user) => {
-                  const online = isUserOnline(user);
-                  return (
-                    <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                      <td className="px-8 py-4">
-                        <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleEditRole(user)}>
-                          <div className="relative">
-                            {user.avatar_url ? (
-                              <img
-                                src={getOptimizedImageUrl(user.avatar_url, 80, 80)}
-                                alt=""
-                                className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-700"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 relative overflow-hidden">
-                                <i className="ri-user-3-fill absolute text-3xl opacity-10 translate-y-1"></i>
-                                <span className="relative z-10">{user.full_name.charAt(0).toUpperCase()}</span>
+                {filteredUsers.length === 0 && !loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-20 text-center text-slate-500 font-medium">
+                      No users found matching your filters.
+                    </td>
+                  </tr>
+                ) : loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <i className="ri-loader-4-line text-4xl text-blue-500 animate-spin"></i>
+                        <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Hydrating User Data...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    {filteredUsers.map((user) => {
+                      if (!user || !user.id) return null;
+                      const online = isUserOnline(user);
+                      const safeName = user.full_name || 'Unnamed User';
+                      const safeEmail = user.email || 'No email';
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleEditRole(user)}>
+                              <div className="relative">
+                                {user.avatar_url ? (
+                                  <img
+                                    src={user.avatar_url}
+                                    alt=""
+                                    className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-700"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 relative overflow-hidden">
+                                    <i className="ri-user-3-fill absolute text-3xl opacity-10 translate-y-1"></i>
+                                    <span className="relative z-10">{safeName.charAt(0).toUpperCase()}</span>
+                                  </div>
+                                )}
+                                {online && (
+                                  <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full"></span>
+                                )}
                               </div>
-                            )}
-                            {online && (
-                              <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full"></span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-bold text-sm text-slate-900 dark:text-white">{user.full_name}</div>
-                            <div className="text-xs text-slate-500">{user.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide w-fit ${user.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                            {user.is_active ? 'Active' : 'Suspended'}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {online ? 'Online Now' : 'Offline'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-4">
-                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-600">
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-8 py-4 text-right">
-                        <button
-                          onClick={() => setOpenDropdown(openDropdown === user.id ? null : user.id)}
-                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                        >
-                          <i className="ri-more-2-fill text-xl"></i>
-                        </button>
-                        {/* Dropdown */}
-                        {openDropdown === user.id && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
-                            <div className="absolute right-8 mt-2 w-48 bg-white dark:bg-slate-800 shadow-xl rounded-xl z-20 border border-slate-100 dark:border-slate-700 py-1 text-left">
-                              <button onClick={() => handleMessageUser(user.id)} className="block w-full text-left px-4 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20">Message User</button>
-                              <button onClick={() => handleEditRole(user)} className="block w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">View Details / Edit</button>
-                              <button onClick={() => handleDeleteUser(user.id)} className="block w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20">Delete User</button>
+                              <div>
+                                <div className="font-bold text-sm text-slate-900 dark:text-white">{safeName}</div>
+                                <div className="text-xs text-slate-500">{safeEmail}</div>
+                              </div>
                             </div>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                          </td>
+                          <td className="px-8 py-4">
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide w-fit ${user.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                                {user.is_active ? 'Active' : 'Suspended'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {online ? 'Online Now' : 'Offline'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-4">
+                            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-600">
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-8 py-4 text-right">
+                            <button
+                              onClick={() => setOpenDropdown(openDropdown === user.id ? null : user.id)}
+                              className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                            >
+                              <i className="ri-more-2-fill text-xl"></i>
+                            </button>
+                            {/* Dropdown */}
+                            {openDropdown === user.id && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
+                                <div className="absolute right-8 mt-2 w-48 bg-white dark:bg-slate-800 shadow-xl rounded-xl z-20 border border-slate-100 dark:border-slate-700 py-1 text-left">
+                                  <button onClick={() => handleMessageUser(user.id)} className="block w-full text-left px-4 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20">Message User</button>
+                                  <button onClick={() => handleEditRole(user)} className="block w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">View Details / Edit</button>
+                                  <button onClick={() => handleDeleteUser(user.id)} className="block w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20">Delete User</button>
+                                </div>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {hasMore && searchTerm === '' && roleFilter === 'all' && (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-8 text-center">
+                          <button
+                            onClick={handleLoadMore}
+                            disabled={loadingMore}
+                            className="px-6 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50"
+                          >
+                            {loadingMore ? (
+                              <span className="flex items-center gap-2">
+                                <i className="ri-loader-4-line animate-spin"></i>
+                                Loading...
+                              </span>
+                            ) : 'Load More Users'}
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )}
               </tbody>
             </table>
           </div>
@@ -590,7 +854,7 @@ export default function UserManagement() {
                   ) : (
                     <>
                       <i className="ri-user-3-fill absolute text-[8rem] opacity-5 translate-y-4"></i>
-                      <span className="relative z-10 text-slate-400">{editData.full_name.charAt(0)}</span>
+                      <span className="relative z-10 text-slate-400">{(editData.full_name || 'U').charAt(0)}</span>
                     </>
                   )}
                 </div>

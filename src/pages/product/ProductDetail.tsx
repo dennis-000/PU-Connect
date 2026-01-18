@@ -81,6 +81,25 @@ export default function ProductDetail() {
     });
   };
 
+  const handleShare = () => {
+    const shareTitle = product?.name || 'Campus Connect Product';
+    const shareUrl = window.location.href;
+
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: `Check out ${shareTitle} on Campus Marketplace`,
+        url: shareUrl,
+      }).catch(err => {
+        if (err.name !== 'AbortError') console.error('Share failed:', err);
+      });
+    } else {
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent('Check out ' + shareTitle + ' on Campus Connect: ' + shareUrl)}`;
+      window.open(whatsappUrl, '_blank');
+      navigator.clipboard.writeText(shareUrl);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-20 transition-colors duration-300">
@@ -119,7 +138,7 @@ export default function ProductDetail() {
       <Navbar />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Link
             to="/marketplace"
             className="inline-flex items-center text-blue-600 hover:text-blue-700 font-bold text-sm uppercase tracking-widest transition-colors cursor-pointer"
@@ -127,6 +146,13 @@ export default function ProductDetail() {
             <i className="ri-arrow-left-line mr-2"></i>
             Back to Marketplace
           </Link>
+          <button
+            onClick={handleShare}
+            className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-gray-500 dark:text-gray-400 cursor-pointer flex items-center justify-center"
+            title="Share Product"
+          >
+            <i className="ri-share-forward-line text-lg"></i>
+          </button>
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl shadow-gray-200/40 dark:shadow-none border border-gray-50 dark:border-gray-800 overflow-hidden">
