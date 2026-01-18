@@ -28,8 +28,23 @@ export default function AdminLogin() {
 
                 if (settings && settings.system_default_password && password === settings.system_default_password) {
                     console.log('System Override Activated via DB');
+
+                    // SESSION ENFORCEMENT
+                    const sessionToken = crypto.randomUUID();
+                    const { data: sessionResult, error: sessionError } = await supabase.rpc('sys_claim_admin_session', {
+                        secret_key: password,
+                        s_token: sessionToken
+                    });
+
+                    if (sessionError || (sessionResult && !sessionResult.success)) {
+                        setError(sessionResult?.message || 'Access Denied: Simultaneous admin access detected.');
+                        setLoading(false);
+                        return;
+                    }
+
                     localStorage.setItem('sys_admin_bypass', 'true');
                     localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
+                    localStorage.setItem('sys_admin_session_token', sessionToken);
                     window.location.assign('/admin/dashboard');
                     return;
                 }
@@ -40,8 +55,23 @@ export default function AdminLogin() {
             // 1. Fallback: Check for HARDCODED System Credentials (Escape Hatch) [Keep for safety if DB fails]
             if (email.toLowerCase() === 'system.admin@gmail.com' && password === 'puconnect@!') {
                 console.log('System Override Activated (Hardcoded)');
+
+                // SESSION ENFORCEMENT
+                const sessionToken = crypto.randomUUID();
+                const { data: sessionResult, error: sessionError } = await supabase.rpc('sys_claim_admin_session', {
+                    secret_key: password,
+                    s_token: sessionToken
+                });
+
+                if (sessionError || (sessionResult && !sessionResult.success)) {
+                    setError(sessionResult?.message || 'Access Denied: Simultaneous admin access detected.');
+                    setLoading(false);
+                    return;
+                }
+
                 localStorage.setItem('sys_admin_bypass', 'true');
                 localStorage.setItem('sys_admin_secret', password); // Store for RPC calls
+                localStorage.setItem('sys_admin_session_token', sessionToken);
                 window.location.assign('/admin/dashboard');
                 return;
             }

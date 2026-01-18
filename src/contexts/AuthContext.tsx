@@ -193,6 +193,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const initAuth = async () => {
+      // Safety timeout: If auth takes longer than 7s, force finish loading so user isn't stuck.
+      const safetyTimeout = setTimeout(() => {
+        if (mounted) {
+          console.warn('Authentication timed out. Forcing app load.');
+          setLoading(false);
+        }
+      }, 7000);
+
       try {
         // 0. Check for System Admin Bypass
         const sysBypass = localStorage.getItem('sys_admin_bypass');
@@ -226,6 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(mockProfile);
             localStorage.setItem('pentvars_profile', JSON.stringify(mockProfile)); // Persist for Navbar
             setLoading(false);
+            clearTimeout(safetyTimeout);
             return; // Stop further auth checks
           }
         }
@@ -247,6 +256,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           setUser(session.user);
+          // Don't await strictly if we already have cached profile, but we want fresh data.
+          // We await here normally, but the timeout protects us.
           const profileData = await fetchProfile(session.user.id, session.user);
 
           if (mounted) {
@@ -264,6 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Auth initialization error:', err);
         if (mounted) setError('Failed to initialize authentication');
       } finally {
+        clearTimeout(safetyTimeout);
         if (mounted) setLoading(false);
       }
     };

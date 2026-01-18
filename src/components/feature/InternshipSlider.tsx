@@ -57,8 +57,8 @@ export default function InternshipSlider() {
                             </div>
                             <div className="flex flex-col items-end gap-1">
                                 <span className={`px-2 md:px-3 py-1 text-[8px] md:text-[9px] font-black uppercase tracking-widest rounded-full border border-transparent ${job.source === 'Abroad'
-                                        ? 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300'
-                                        : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300'
+                                    ? 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300'
+                                    : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300'
                                     } group-hover/card:border-current transition-colors`}>
                                     {job.type}
                                 </span>
@@ -79,8 +79,8 @@ export default function InternshipSlider() {
                         </div>
 
                         <div className="flex items-center justify-between pt-3 md:pt-4 border-t border-gray-50 dark:border-gray-800 mt-auto relative z-10">
-                            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
-                                {job.source === 'LinkedIn' ? <i className="ri-linkedin-fill text-blue-600 text-sm"></i> : <i className="ri-briefcase-4-line text-sm"></i>}
+                            <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${job.source === 'LinkedIn' ? 'text-[#0077b5]' : 'text-gray-400'}`}>
+                                {job.source === 'LinkedIn' ? <i className="ri-linkedin-fill text-lg"></i> : <i className="ri-briefcase-4-line text-sm"></i>}
                                 {job.source}
                             </span>
                             <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-900 dark:text-white group-hover/card:bg-blue-600 group-hover/card:text-white transition-all shadow-sm">

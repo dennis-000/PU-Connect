@@ -103,7 +103,24 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     try {
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret');
+      const token = localStorage.getItem('sys_admin_session_token');
+
+      if (isBypass && secret && token) {
+        // Release the session so others can log in
+        await supabase.rpc('sys_release_admin_session', {
+          secret_key: secret,
+          s_token: token
+        });
+      }
+
       await signOut();
+
+      // Clear bypass keys
+      localStorage.removeItem('sys_admin_bypass');
+      localStorage.removeItem('sys_admin_secret');
+      localStorage.removeItem('sys_admin_session_token');
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -199,20 +216,17 @@ export default function Navbar() {
     const isSysAdminBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     if (profile?.role === 'super_admin' || profile?.role === 'admin' || isSysAdminBypass)
       return { label: 'Admin Dashboard', path: '/admin', icon: 'ri-dashboard-line' };
-    if (profile?.role === 'news_publisher') return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
-    if (profile?.role === 'seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
-    if (profile?.role === 'publisher_seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
+
+    if (profile?.role === 'news_publisher')
+      return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
+
+    if (profile?.role === 'seller' || profile?.role === 'publisher_seller')
+      return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
 
     // If they have an application that is NOT approved (pending/rejected), show status
     if (applicationStatus && applicationStatus !== 'approved' && applicationStatus !== 'cancelled') {
       return { label: 'View Application Status', path: '/seller/status', icon: 'ri-file-list-3-line' };
     }
-
-    if (profile?.role === 'seller' || profile?.role === 'publisher_seller')
-      return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
-
-    if (profile?.role === 'news_publisher')
-      return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
 
     return null;
   };
