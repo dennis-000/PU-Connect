@@ -202,6 +202,8 @@ export default function Messages() {
         .insert({
           buyer_id: user.id,
           seller_id: otherUser.id,
+          last_message: '',
+          last_message_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .select()

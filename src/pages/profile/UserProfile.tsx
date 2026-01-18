@@ -38,6 +38,7 @@ export default function UserProfile() {
     faculty: '',
     avatar_url: '',
     phone: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function UserProfile() {
         faculty: profile.faculty || '',
         avatar_url: profile.avatar_url || '',
         phone: profile.phone || '',
+        email: profile.email || '',
       });
     }
   }, [profile]);
@@ -95,26 +97,66 @@ export default function UserProfile() {
         console.log('Avatar uploaded successfully:', url);
       }
 
-      // 2. Update profiles table
-      console.log('Updating profile in database...', formData);
-      const { data, error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: profile.id,
-          email: profile.email, // Include email to satisfy not-null constraint on new rows
-          full_name: formData.full_name,
-          student_id: formData.student_id,
-          department: formData.department,
-          faculty: formData.faculty,
-          avatar_url: finalAvatarUrl,
-          phone: formData.phone,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      // Validate Email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
 
-      if (updateError) throw updateError;
-      if (!data) throw new Error('No data returned after update');
+      // Check for System Admin Bypass
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
+
+      if (isBypass) {
+        // Use RPC for System Admin
+        const { error } = await supabase.rpc('sys_update_my_profile', {
+          new_email: formData.email,
+          new_full_name: formData.full_name,
+          new_phone: formData.phone,
+          new_avatar_url: finalAvatarUrl,
+          new_dept: formData.department,
+          new_faculty: formData.faculty,
+          secret_key: secret
+        });
+        if (error) throw error;
+
+        // Manual data setting for feedback since RPC returns void
+        data = { ...formData, id: '00000000-0000-0000-0000-000000000000' };
+
+        // Warn about Login
+        if (formData.email !== 'system.admin@gmail.com') {
+          alert('IMPORTANT: You have updated your profile email. However, because you are using the System Admin Bypass, you MUST continue to use "system.admin@gmail.com" to login.');
+        }
+      } else {
+        // Regular User Update
+        // If email changed, try to update Auth User
+        if (formData.email !== profile.email) {
+          const { error: authError } = await supabase.auth.updateUser({ email: formData.email });
+          if (authError) throw authError;
+          alert('Email updated! Please check your new email for a confirmation link if required.');
+        }
+
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: profile.id,
+            email: formData.email,
+            full_name: formData.full_name,
+            student_id: formData.student_id,
+            department: formData.department,
+            faculty: formData.faculty,
+            avatar_url: finalAvatarUrl,
+            phone: formData.phone,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        data = updatedProfile;
+      }
+
+      if (!data && !isBypass) throw new Error('No data returned after update');
 
       console.log('Profile updated successfully:', data);
 
@@ -399,7 +441,7 @@ export default function UserProfile() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {[
                         { label: 'Full Name', key: 'full_name', value: formData.full_name, type: 'text', placeholder: 'Your Legal Name', icon: 'ri-user-line' },
-                        { label: 'Email Address', key: 'email', value: profile.email, type: 'email', disabled: true, icon: 'ri-mail-line' },
+                        { label: 'Email Address', key: 'email', value: formData.email, type: 'email', disabled: false, icon: 'ri-mail-line' },
                         { label: 'Phone Number', key: 'phone', value: formData.phone, type: 'tel', placeholder: 'Eg. 055 555 5555', icon: 'ri-phone-line' },
                         { label: 'Student ID', key: 'student_id', value: formData.student_id, type: 'text', placeholder: 'Your Index Number', icon: 'ri-id-card-line' },
                         { label: 'Faculty', key: 'faculty', value: formData.faculty, type: 'text', placeholder: 'Eg. Computing & Engineering', icon: 'ri-building-4-line' },

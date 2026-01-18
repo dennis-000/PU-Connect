@@ -37,23 +37,57 @@ export default function SupportTickets() {
 
     const fetchTickets = async () => {
         setLoading(true);
+        const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+        const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
+
         try {
-            let query = supabase
-                .from('support_tickets')
-                .select('*, user:profiles!user_id(full_name, email, phone)')
-                .order('created_at', { ascending: false });
+            if (isBypass && secret) {
+                // Bypass RLS using RPC
+                const { data, error } = await supabase.rpc('sys_get_support_tickets', { secret_key: secret });
+                if (error) throw error;
+                // Map flat RPC result to nested structure
+                const adapted = (data as any[]).map(d => ({
+                    id: d.id,
+                    subject: d.subject,
+                    message: d.message,
+                    status: d.status,
+                    priority: d.priority,
+                    created_at: d.created_at,
+                    user_id: d.user_id,
+                    user: {
+                        full_name: d.user_full_name,
+                        email: d.user_email,
+                        phone: d.user_phone
+                    }
+                }));
 
-            if (filter !== 'all') {
-                if (filter === 'open') {
-                    query = query.in('status', ['open', 'in_progress']);
-                } else {
-                    query = query.in('status', ['resolved', 'closed']);
+                const filtered = adapted.filter(ticket => {
+                    if (filter === 'all') return true;
+                    if (filter === 'open') return ticket.status === 'open' || ticket.status === 'in_progress';
+                    if (filter === 'resolved') return ticket.status === 'resolved' || ticket.status === 'closed';
+                    return true;
+                });
+
+                setTickets(filtered);
+            } else {
+                // Standard RLS
+                let query = supabase
+                    .from('support_tickets')
+                    .select('*, user:profiles!user_id(full_name, email, phone)')
+                    .order('created_at', { ascending: false });
+
+                if (filter !== 'all') {
+                    if (filter === 'open') {
+                        query = query.in('status', ['open', 'in_progress']);
+                    } else {
+                        query = query.in('status', ['resolved', 'closed']);
+                    }
                 }
-            }
 
-            const { data, error } = await query;
-            if (error) throw error;
-            setTickets(data as any || []);
+                const { data, error } = await query;
+                if (error) throw error;
+                setTickets(data as any || []);
+            }
         } catch (error) {
             console.error('Error fetching tickets:', error);
         } finally {
@@ -63,8 +97,16 @@ export default function SupportTickets() {
 
     const updateStatus = async (id: string, newStatus: string) => {
         try {
-            const { error } = await supabase.from('support_tickets').update({ status: newStatus }).eq('id', id);
-            if (error) throw error;
+            const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+            const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
+
+            if (isBypass) {
+                const { error } = await supabase.rpc('sys_update_support_ticket', { ticket_id: id, new_status: newStatus, secret_key: secret });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('support_tickets').update({ status: newStatus }).eq('id', id);
+                if (error) throw error;
+            }
             fetchTickets();
         } catch (err) {
             console.error('Error updating ticket', err);
@@ -74,8 +116,16 @@ export default function SupportTickets() {
     const deleteTicket = async (id: string) => {
         if (!confirm('Permanently delete this ticket?')) return;
         try {
-            const { error } = await supabase.from('support_tickets').delete().eq('id', id);
-            if (error) throw error;
+            const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+            const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
+
+            if (isBypass) {
+                const { error } = await supabase.rpc('sys_delete_support_ticket', { ticket_id: id, secret_key: secret });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('support_tickets').delete().eq('id', id);
+                if (error) throw error;
+            }
             fetchTickets();
         } catch (err) {
             console.error('Error deleting ticket', err);

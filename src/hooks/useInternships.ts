@@ -80,28 +80,90 @@ export function useInternships(filters?: { search?: string; type?: string }) {
     return useQuery({
         queryKey: ['internships', filters],
         queryFn: async () => {
+            const results: Internship[] = [];
+
+            // 1. Fetch from Supabase
             try {
-                let query = supabase
+                const { data, error } = await supabase
                     .from('internships')
                     .select('*')
                     .eq('is_active', true)
                     .order('posted_at', { ascending: false });
 
-                const { data, error } = await query;
-
                 if (error) {
-                    // Fallback to mock data if table doesn't exist yet (404/400)
-                    console.warn('Fetching internships failed (likely table missing), using mock data:', error);
-                    return MOCK_DATA;
+                    console.warn('Fetching Supabase internships failed:', error);
+                    // results.push(...MOCK_DATA); // DISABLE MOCK FALLBACK
+                } else if (data && data.length > 0) {
+                    results.push(...data);
+                } else {
+                    // DB is empty, do nothing.
+                }
+            } catch (err) {
+                console.error('Supabase error:', err);
+            }
+
+            // 2. Fetch from LinkedIn (via Proxy)
+            // We use the search filter if available within a broader context, or just broader "Internship"
+            // Note: We append "Internship" to ensure we get relevant results if the user searches for "Google"
+            const searchQuery = filters?.search
+                ? `${filters.search} Internship`
+                : 'Internship';
+
+            // Only fetch if we are not aggressively filtering for "Local" (unless we want to search local linkedin jobs)
+            // But let's fetch anyway and let client filter.
+            const { fetchLinkedInJobs } = await import('../lib/linkedin-service');
+            const linkedInJobs = await fetchLinkedInJobs(searchQuery);
+
+            const mappedLinkedInJobs: Internship[] = linkedInJobs.map(job => {
+                const id = job.job_id || job.id || Math.random().toString();
+                const title = job.job_title || job.title || 'Internship';
+                const company = job.employer_name || job.organization || 'Unknown Company';
+
+                let location = 'Remote';
+                if (job.locations_derived && job.locations_derived.length > 0) {
+                    location = job.locations_derived[0];
+                } else if (job.job_city || job.job_country) {
+                    location = `${job.job_city || ''}, ${job.job_country || ''}`.replace(/^, /, '').trim();
                 }
 
-                // Return mixed data? No, probably either DB or Mock.
-                return data && data.length > 0 ? data : MOCK_DATA;
-            } catch (err) {
-                console.error('useInternships error:', err);
-                return MOCK_DATA;
-            }
+                // Handle employment type (array or string)
+                let type = 'Internship';
+                if (Array.isArray(job.employment_type) && job.employment_type.length > 0) {
+                    type = job.employment_type[0]; // e.g. "INTERN"
+                } else if (job.job_employment_type) {
+                    type = job.job_employment_type;
+                }
+
+                const url = job.job_apply_link || job.url || '#';
+                const logo_url = job.employer_logo || job.organization_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(company)}&background=0077b5&color=fff`;
+                const posted_at = job.job_posted_at_datetime_utc || job.date_posted || new Date().toISOString();
+
+                return {
+                    id,
+                    title,
+                    company,
+                    location,
+                    type,
+                    source: 'LinkedIn',
+                    description: job.job_description || '',
+                    url,
+                    logo_url,
+                    posted_at,
+                    created_at: new Date().toISOString(),
+                    is_active: true
+                };
+            });
+
+            // Combine results
+            // Deduplicate by ID just in case
+            const allJobs = [...results, ...mappedLinkedInJobs];
+            const uniqueJobs = Array.from(new Map(allJobs.map(item => [item.id, item])).values());
+
+            // Sort by date (newest first)
+            return uniqueJobs.sort((a, b) =>
+                new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime()
+            );
         },
-        staleTime: 1000 * 60 * 10, // 10 minutes
+        staleTime: 0, // Real-time: Always refetch on mount
     });
 }

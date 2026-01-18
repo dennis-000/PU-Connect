@@ -70,15 +70,21 @@ export default function WebsiteSettings() {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('website_settings')
-        .select('*')
-        .single();
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (isBypass) {
+        const { data, error } = await supabase.rpc('sys_get_website_settings', { secret_key: secret });
+        if (error) throw error;
+        if (data) setSettings(data as WebsiteSettings);
+      } else {
+        const { data, error } = await supabase
+          .from('website_settings')
+          .select('*')
+          .single();
 
-      if (data) {
-        setSettings(data);
+        if (error && error.code !== 'PGRST116') throw error;
+        if (data) setSettings(data);
       }
     } catch (err: any) {
       console.error('Error loading settings:', err);
@@ -90,30 +96,27 @@ export default function WebsiteSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: existing } = await supabase
-        .from('website_settings')
-        .select('id')
-        .single();
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
 
-      if (existing) {
-        const { error } = await supabase
-          .from('website_settings')
-          .update({
-            ...settings,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-
+      if (isBypass) {
+        const { error } = await supabase.rpc('sys_update_website_settings_full', { data: settings, secret_key: secret });
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('website_settings')
-          .insert({
-            ...settings,
-            updated_at: new Date().toISOString(),
-          });
+        const { data: existing } = await supabase.from('website_settings').select('id').single();
 
-        if (error) throw error;
+        if (existing) {
+          const { error } = await supabase
+            .from('website_settings')
+            .update({ ...settings, updated_at: new Date().toISOString() })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('website_settings')
+            .insert({ ...settings, updated_at: new Date().toISOString() });
+          if (error) throw error;
+        }
       }
 
       setNotification({ type: 'success', message: 'Settings saved successfully!' });

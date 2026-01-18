@@ -16,8 +16,14 @@ export default function UserManagement() {
   useEffect(() => {
     console.log('🛡️ UserManagement Component Mounted');
     console.log('👤 Current Profile:', profile);
-    console.log('🔑 Bypass Active:', localStorage.getItem('sys_admin_bypass') === 'true');
-  }, [profile]);
+
+    // Strict Access Control: Only Admins
+    if (!authLoading && profile && profile.role !== 'admin' && profile.role !== 'super_admin') {
+      console.warn('⛔ Access Denied: User is not an admin. Role:', profile.role);
+      navigate('/dashboard'); // or /admin/dashboard, depending on their allowed area
+      return;
+    }
+  }, [profile, authLoading, navigate]);
 
   const { mutate: createConversation } = useCreateConversation();
 
@@ -684,7 +690,6 @@ export default function UserManagement() {
                 <option value="all">All Roles</option>
                 <option value="buyer">Buyers</option>
                 <option value="seller">Sellers</option>
-                <option value="news_publisher">News Publishers</option>
                 <option value="publisher_seller">Publisher & Seller</option>
                 <option value="admin">Admins</option>
               </select>
@@ -928,8 +933,8 @@ export default function UserManagement() {
 
               <div>
                 <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2 mb-4">Role Assignment</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {['buyer', 'seller', 'admin', 'news_publisher'].map(role => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {['buyer', 'seller', 'news_publisher', 'publisher_seller', 'admin'].map(role => (
                     <div
                       key={role}
                       onClick={() => setEditData({ ...editData, role })}

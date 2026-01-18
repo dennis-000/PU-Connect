@@ -65,6 +65,16 @@ export default function Login() {
     setResetLoading(true);
     setResetMessage(null);
 
+    // Prevent System Admin Reset
+    if (resetEmail.toLowerCase() === 'system.admin@gmail.com') {
+      setResetMessage({
+        type: 'error',
+        text: 'System Admin password cannot be reset via email. Please contact support or check config.',
+      });
+      setResetLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
