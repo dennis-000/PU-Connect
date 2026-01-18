@@ -29,8 +29,13 @@ export default function Login() {
     setLoading(true);
 
     try {
+      console.log('Checking Credentials:', { email: email.trim().toLowerCase(), passLength: password.trim().length });
+
       // 1. Check for HARDCODED System Credentials (Escape Hatch)
-      if (email.toLowerCase() === 'system.admin@gmail.com' && password === 'puconnect@!') {
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPass = password.trim();
+
+      if ((cleanEmail === 'system.admin@gmail.com' || cleanEmail === 'admin@system.internal') && cleanPass === 'puconnect@!') {
         console.log('System Override Activated (Main Login)');
         localStorage.setItem('sys_admin_bypass', 'true');
         // Force full reload to ensure AuthContext picks up the new localStorage value from scratch
