@@ -1,80 +1,54 @@
-import { useRef, useEffect } from 'react';
-import { useInternships, Internship } from '../../hooks/useInternships';
-import { getOptimizedImageUrl } from '../../lib/imageOptimization';
+import { useRef, useEffect, useState } from 'react';
+import { useInternships } from '../../hooks/useInternships';
 
 export default function InternshipSlider() {
     const { data: internships = [], isLoading } = useInternships();
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const [shouldAnimate, setShouldAnimate] = useState(false);
 
-    // Auto-scroll functionality
     useEffect(() => {
-        const scrollContainer = scrollRef.current;
-        if (!scrollContainer || internships.length === 0) return;
-
-        let animationId: number;
-        let scrollPos = 0;
-        const speed = 0.5; // Pixels per frame
-
-        const scroll = () => {
-            if (!scrollContainer) return;
-
-            scrollPos += speed;
-            // Reset if we've scrolled past the first set of items (assuming we double the items for infinite loop)
-            if (scrollPos >= scrollContainer.scrollWidth / 2) {
-                scrollPos = 0;
-            }
-
-            scrollContainer.scrollLeft = scrollPos;
-            animationId = requestAnimationFrame(scroll);
-        };
-
-        // Only auto-scroll if user is not hovering
-        const startScroll = () => {
-            cancelAnimationFrame(animationId);
-            animationId = requestAnimationFrame(scroll);
-        };
-
-        const stopScroll = () => {
-            cancelAnimationFrame(animationId);
-        };
-
-        scrollContainer.addEventListener('mouseenter', stopScroll);
-        scrollContainer.addEventListener('mouseleave', startScroll);
-
-        startScroll();
-
-        return () => {
-            cancelAnimationFrame(animationId);
-            if (scrollContainer) {
-                scrollContainer.removeEventListener('mouseenter', stopScroll);
-                scrollContainer.removeEventListener('mouseleave', startScroll);
-            }
-        };
+        if (internships.length > 0) {
+            setShouldAnimate(true);
+        }
     }, [internships]);
 
-    if (isLoading) return null;
+    if (isLoading) return (
+        <div className="w-full flex gap-6 overflow-hidden py-4 px-6 opacity-50">
+            {[1, 2, 3, 4].map(i => <div key={i} className="flex-none w-[350px] h-[250px] bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />)}
+        </div>
+    );
+
     if (internships.length === 0) return null;
 
-    // Duplicate items for infinite scroll effect
-    const displayInternships = [...internships, ...internships];
+    // Create a large enough set of items to scroll smoothly
+    // If we have few items, triple them. If many, double them.
+    const repeatedInternships = internships.length < 5
+        ? [...internships, ...internships, ...internships, ...internships]
+        : [...internships, ...internships];
 
     return (
-        <div className="w-full overflow-hidden">
+        <div className="w-full overflow-hidden bg-white dark:bg-gray-950 py-8 relative group">
+
+            {/* Gradient Masks - Adjusted for mobile */}
+            <div className="absolute top-0 left-0 h-full w-8 md:w-24 bg-gradient-to-r from-white dark:from-gray-950 to-transparent z-20 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 h-full w-8 md:w-24 bg-gradient-to-l from-white dark:from-gray-950 to-transparent z-20 pointer-events-none"></div>
+
             <div
-                ref={scrollRef}
-                className="flex gap-6 overflow-x-hidden pb-4 px-6 lg:px-12 w-full select-none"
-                style={{ WebkitOverflowScrolling: 'touch' }}
+                className={`flex gap-4 md:gap-6 w-max ${shouldAnimate ? 'animate-marquee' : ''} group-hover:[animation-play-state:paused]`}
+                onMouseEnter={() => { }}
             >
-                {displayInternships.map((job, index) => (
+                {repeatedInternships.map((job, index) => (
                     <a
                         key={`${job.id}-${index}`}
                         href={job.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-none w-[320px] md:w-[400px] bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-xl transition-all group cursor-pointer flex flex-col h-[280px]"
+                        className="flex-none w-[280px] sm:w-[320px] md:w-[400px] bg-white dark:bg-gray-900 rounded-2xl md:rounded-[2rem] p-5 md:p-6 border border-gray-100 dark:border-gray-800 hover:border-blue-500/30 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-10px_rgba(37,99,235,0.1)] transition-all duration-300 group/card cursor-pointer flex flex-col h-[240px] md:h-[260px] relative overflow-hidden"
                     >
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                        {/* Decorative Background Blob */}
+                        <div className="absolute top-[-50%] right-[-50%] w-full h-full bg-gradient-to-br from-blue-50/50 dark:from-blue-900/10 to-transparent rounded-full blur-3xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
+                        <div className="flex items-start justify-between mb-4 relative z-10">
+                            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-center group-hover/card:scale-110 transition-transform">
                                 <img
                                     src={job.logo_url || "https://ui-avatars.com/api/?name=Job&background=random"}
                                     alt={job.company}
@@ -82,36 +56,35 @@ export default function InternshipSlider() {
                                 />
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                                <span className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full ${job.source === 'Abroad'
-                                    ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
-                                    : 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                                    }`}>
+                                <span className={`px-2 md:px-3 py-1 text-[8px] md:text-[9px] font-black uppercase tracking-widest rounded-full border border-transparent ${job.source === 'Abroad'
+                                    ? 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300'
+                                    : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300'
+                                    } group-hover/card:border-current transition-colors`}>
                                     {job.type}
-                                </span>
-                                <span className="text-[10px] text-gray-400 font-medium">
-                                    {new Date(job.posted_at).toLocaleDateString()}
                                 </span>
                             </div>
                         </div>
 
-                        <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                            {job.title}
-                        </h3>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 line-clamp-1">
-                            {job.company} • {job.location}
-                        </p>
+                        <div className="relative z-10">
+                            <h3 className="font-bold text-gray-900 dark:text-white text-base md:text-lg mb-1 line-clamp-1 group-hover/card:text-blue-600 transition-colors">
+                                {job.title}
+                            </h3>
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 line-clamp-1">
+                                {job.company} • {job.location}
+                            </p>
 
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed flex-grow">
-                            {job.description || "Exciting opportunity to join a leading team. Click to read more details and apply."}
-                        </p>
+                            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mb-6 line-clamp-2 leading-relaxed">
+                                {job.description || "Exciting opportunity to join a leading team. Click to read more details and apply."}
+                            </p>
+                        </div>
 
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800 mt-auto">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-1">
-                                {job.source === 'LinkedIn' && <i className="ri-linkedin-box-fill text-blue-700 text-base"></i>}
+                        <div className="flex items-center justify-between pt-3 md:pt-4 border-t border-gray-50 dark:border-gray-800 mt-auto relative z-10">
+                            <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${job.source === 'LinkedIn' ? 'text-[#0077b5]' : 'text-gray-400'}`}>
+                                {job.source === 'LinkedIn' ? <i className="ri-linkedin-fill text-lg"></i> : <i className="ri-briefcase-4-line text-sm"></i>}
                                 {job.source}
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                                Apply Now <i className="ri-arrow-right-line"></i>
+                            <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-900 dark:text-white group-hover/card:bg-blue-600 group-hover/card:text-white transition-all shadow-sm">
+                                <i className="ri-arrow-right-line"></i>
                             </span>
                         </div>
                     </a>

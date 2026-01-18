@@ -11,6 +11,7 @@ import ErrorBoundary from "./components/base/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 import SystemAnnouncement from "./components/base/SystemAnnouncement";
+import GlobalAdPopup from "./components/feature/GlobalAdPopup";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <I18nextProvider i18n={i18n}>
           <AuthProvider>
             <BrowserRouter basename={__BASE_PATH__}>
+              <GlobalAdPopup />
               {/* <SystemAnnouncement /> */}
               <ErrorBoundary>
                 <Suspense fallback={

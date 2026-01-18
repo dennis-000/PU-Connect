@@ -103,7 +103,24 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     try {
+      const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+      const secret = localStorage.getItem('sys_admin_secret');
+      const token = localStorage.getItem('sys_admin_session_token');
+
+      if (isBypass && secret && token) {
+        // Release the session so others can log in
+        await supabase.rpc('sys_release_admin_session', {
+          secret_key: secret,
+          s_token: token
+        });
+      }
+
       await signOut();
+
+      // Clear bypass keys
+      localStorage.removeItem('sys_admin_bypass');
+      localStorage.removeItem('sys_admin_secret');
+      localStorage.removeItem('sys_admin_session_token');
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -199,20 +216,17 @@ export default function Navbar() {
     const isSysAdminBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     if (profile?.role === 'super_admin' || profile?.role === 'admin' || isSysAdminBypass)
       return { label: 'Admin Dashboard', path: '/admin', icon: 'ri-dashboard-line' };
-    if (profile?.role === 'news_publisher') return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
-    if (profile?.role === 'seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
-    if (profile?.role === 'publisher_seller') return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
+
+    if (profile?.role === 'news_publisher')
+      return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
+
+    if (profile?.role === 'seller' || profile?.role === 'publisher_seller')
+      return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
 
     // If they have an application that is NOT approved (pending/rejected), show status
     if (applicationStatus && applicationStatus !== 'approved' && applicationStatus !== 'cancelled') {
       return { label: 'View Application Status', path: '/seller/status', icon: 'ri-file-list-3-line' };
     }
-
-    if (profile?.role === 'seller' || profile?.role === 'publisher_seller')
-      return { label: 'Seller Dashboard', path: '/seller/dashboard', icon: 'ri-store-3-line' };
-
-    if (profile?.role === 'news_publisher')
-      return { label: 'Publisher Dashboard', path: '/publisher', icon: 'ri-article-line' };
 
     return null;
   };
@@ -617,43 +631,46 @@ export default function Navbar() {
 
             <div className="mt-8 text-center">
               <p className="text-[9px] font-bold text-gray-700 uppercase tracking-widest">
-                Pentecost University • PU Connect
+                PU Connect • Student Portal
               </p>
             </div>
           </div>
         </div>
       </div>
+
       {/* News Alert Toast */}
-      {newsNotification && (
-        <div className="fixed bottom-10 right-10 z-[100] animate-in slide-in-from-right-10 duration-500">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-1 shadow-2xl shadow-blue-500/10 border border-gray-100 dark:border-gray-800 flex items-center gap-4 max-w-sm overflow-hidden group">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white flex-shrink-0 animate-pulse">
-              <i className="ri-notification-3-line text-2xl"></i>
-            </div>
-            <div className="pr-12">
-              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Breaking News Alert</p>
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-tight mb-2">
-                {newsNotification.title}
-              </h4>
+      {
+        newsNotification && (
+          <div className="fixed bottom-10 right-10 z-[100] animate-in slide-in-from-right-10 duration-500">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl p-1 shadow-2xl shadow-blue-500/10 border border-gray-100 dark:border-gray-800 flex items-center gap-4 max-w-sm overflow-hidden group">
+              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white flex-shrink-0 animate-pulse">
+                <i className="ri-notification-3-line text-2xl"></i>
+              </div>
+              <div className="pr-12">
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Breaking News Alert</p>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-tight mb-2">
+                  {newsNotification.title}
+                </h4>
+                <button
+                  onClick={() => {
+                    navigate(`/news/${newsNotification.id}`);
+                    setNewsNotification(null);
+                  }}
+                  className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors"
+                >
+                  Read Article <i className="ri-arrow-right-line"></i>
+                </button>
+              </div>
               <button
-                onClick={() => {
-                  navigate(`/news/${newsNotification.id}`);
-                  setNewsNotification(null);
-                }}
-                className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors"
+                onClick={() => setNewsNotification(null)}
+                className="absolute top-4 right-4 text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                Read Article <i className="ri-arrow-right-line"></i>
+                <i className="ri-close-line text-xl"></i>
               </button>
             </div>
-            <button
-              onClick={() => setNewsNotification(null)}
-              className="absolute top-4 right-4 text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <i className="ri-close-line text-xl"></i>
-            </button>
           </div>
-        </div>
-      )}
-    </nav>
+        )
+      }
+    </nav >
   );
 }

@@ -1,10 +1,66 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* African Pattern Aesthetics */
+@layer utilities {
+  .animate-marquee {
+    animation: marquee 60s linear infinite;
+    will-change: transform;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Custom Scrollbar - Premium Feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+
+/* African Pattern Aesthetics - Optimized */
 .bg-african-pattern {
   position: relative;
   z-index: 1;
@@ -21,10 +77,11 @@
   background-repeat: repeat;
   background-size: 500px;
   opacity: 0.18;
-  /* Increased for better visibility */
   pointer-events: none;
   z-index: -1;
   mix-blend-mode: multiply;
+  /* Hardware Acceleration */
+  will-change: background-position;
   animation: bg-drift 120s linear infinite;
 }
 
@@ -60,10 +117,10 @@
   background-repeat: repeat;
   background-size: 600px;
   opacity: 0.22;
-  /* High visibility for Admin */
   pointer-events: none;
   z-index: -1;
   mix-blend-mode: overlay;
+  will-change: background-position;
   animation: bg-drift 150s linear infinite;
 }
 
@@ -72,7 +129,7 @@
   filter: brightness(0.8) contrast(1.1);
 }
 
-/* Glowing Symbols Animation */
+/* Glowing Symbols Animation - Optimized */
 .bg-glowing-symbols {
   position: relative;
   background-color: #020617;
@@ -92,42 +149,30 @@
   opacity: 0.15;
   pointer-events: none;
   z-index: 0;
+  will-change: transform;
   animation: bg-pan 60s linear infinite;
 }
 
 @keyframes bg-pan {
   from {
-    transform: translate(0, 0) rotate(0deg);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
 
   to {
-    transform: translate(-10%, -10%) rotate(5deg);
-  }
-}
-
-/* Loading Animation */
-@keyframes loading {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  50% {
-    transform: translateX(100%);
-  }
-
-  100% {
-    transform: translateX(-100%);
+    transform: translate3d(-10%, -10%, 0) rotate(5deg);
   }
 }
 
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Montserrat', sans-serif;
+  /* Smart font stack */
+  font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
-  color: #1a1a1a;
+  color: #0f172a;
 }
 
 .dark body {
@@ -144,7 +189,6 @@ html {
   overflow-x: hidden;
 }
 
-/* Prevent layout shift */
 #root {
   min-height: 100vh;
   display: flex;
@@ -152,87 +196,28 @@ html {
   overflow-x: hidden;
 }
 
-/* Smooth transitions */
-* {
-  transition-property: background-color, border-color, color, fill, stroke;
+/* Micro-interaction smoothness */
+a,
+button,
+input,
+select,
+div[role="button"] {
+  transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition-duration: 200ms;
 }
 
-/* Prevent navbar shake - Removed to fix mobile menu fixed positioning */
-
-/* Desktop responsive utilities */
-@media (min-width: 1024px) {
-  body {
-    font-size: 16px;
-  }
-}
-
-@media (min-width: 1280px) {
-  body {
-    font-size: 17px;
-  }
-}
-
-@media (min-width: 1536px) {
-  body {
-    font-size: 18px;
-  }
-}
-
-/* Mobile responsive utilities */
+/* Responsive Utilities */
 @media (max-width: 640px) {
   body {
     font-size: 14px;
-  }
-
-  /* Prevent horizontal scroll on mobile */
-  body,
-  html {
-    max-width: 100vw;
+    /* Prevent horizontal scroll on mobile */
     overflow-x: hidden;
+    width: 100%;
   }
 }
 
-/* Ensure all containers respect viewport width */
 .container,
-section,
-div {
+section {
   max-width: 100%;
-}
-
-/* Mobile-friendly touch targets */
-@media (max-width: 768px) {
-
-  button,
-  a,
-  input,
-  select,
-  textarea {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* Desktop-friendly larger touch targets */
-@media (min-width: 1280px) {
-
-  button,
-  a {
-    min-height: 48px;
-  }
-}
-
-/* Smooth scrolling for all elements */
-* {
-  scroll-behavior: smooth;
-}
-
-/* Better text rendering on large screens */
-@media (min-width: 1536px) {
-  body {
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
 }

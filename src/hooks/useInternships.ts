@@ -102,19 +102,32 @@ export function useInternships(filters?: { search?: string; type?: string }) {
                 console.error('Supabase error:', err);
             }
 
-            // 2. Fetch from LinkedIn (via Proxy)
-            // We use the search filter if available within a broader context, or just broader "Internship"
-            // Note: We append "Internship" to ensure we get relevant results if the user searches for "Google"
-            const searchQuery = filters?.search
-                ? `${filters.search} Internship`
-                : 'Internship';
-
-            // Only fetch if we are not aggressively filtering for "Local" (unless we want to search local linkedin jobs)
-            // But let's fetch anyway and let client filter.
+            // 2. Fetch from LinkedIn (Multi-Query Strategy to Maximize Results)
             const { fetchLinkedInJobs } = await import('../lib/linkedin-service');
-            const linkedInJobs = await fetchLinkedInJobs(searchQuery);
 
-            const mappedLinkedInJobs: Internship[] = linkedInJobs.map(job => {
+            const baseSearch = filters?.search ? `${filters.search} Internship` : 'Internship';
+
+            // We'll run multiple queries to get a diverse set of results
+            const queries = [
+                baseSearch,
+                'Internship Ghana',
+                'Remote Internship',
+                'Software Engineering Internship',
+                'Marketing Internship'
+            ];
+
+            // Remove duplicates if baseSearch overlaps
+            const uniqueQueries = [...new Set(queries)];
+
+            console.log('Fetching LinkedIn jobs for queries:', uniqueQueries);
+
+            const linkedInPromises = uniqueQueries.map(q => fetchLinkedInJobs(q));
+            const linkedInResults = await Promise.all(linkedInPromises);
+
+            // Flatten results
+            const allLinkedInJobs = linkedInResults.flat();
+
+            const mappedLinkedInJobs: Internship[] = allLinkedInJobs.map(job => {
                 const id = job.job_id || job.id || Math.random().toString();
                 const title = job.job_title || job.title || 'Internship';
                 const company = job.employer_name || job.organization || 'Unknown Company';

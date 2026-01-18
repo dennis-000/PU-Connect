@@ -142,7 +142,13 @@ export default function Home() {
               </p>
 
               <div className="hidden md:flex flex-col border-l-2 border-blue-500/50 pl-4 mt-1 backdrop-blur-sm bg-black/20 p-4 rounded-r-2xl border-y border-r border-white/5">
-                <span className="text-2xl font-bold text-white tracking-tight">{stats.students > 0 ? `${(stats.students / 1000).toFixed(1)}K+` : '...'}</span>
+                <span className="text-2xl font-bold text-white tracking-tight">
+                  {stats.students > 1000
+                    ? `${(stats.students / 1000).toFixed(1)}K+`
+                    : stats.students > 0
+                      ? stats.students.toLocaleString()
+                      : '0'}
+                </span>
                 <span className="text-[9px] font-bold text-gray-300 uppercase tracking-wide mt-1">Active Students</span>
               </div>
             </div>
@@ -496,9 +502,17 @@ export default function Home() {
       <section className="py-12 md:py-24 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 mb-12">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-600 font-bold uppercase tracking-widest text-xs mb-3">Careers & Growth</p>
-              <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">Latest <span className="text-blue-600">Internships.</span></h2>
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">
+                <i className="ri-linkedin-box-fill text-lg"></i>
+                <span>Official Live Feed</span>
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-[0.95] mb-6">
+                Career <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Headstart.</span>
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 text-lg leading-relaxed font-medium">
+                Access real-time internship opportunities curated directly from LinkedIn. Launch your professional journey before you even graduate.
+              </p>
             </div>
             <div className="hidden md:flex items-center gap-2">
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">

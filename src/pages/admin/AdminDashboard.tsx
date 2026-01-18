@@ -57,7 +57,8 @@ export default function AdminDashboard() {
     onlineUsers: 0,
     smsEnabled: true,
     newsletter: 0,
-    total_products: 0
+    total_products: 0,
+    subscriptionRequired: true
   });
 
   const [onlinePresence, setOnlinePresence] = useState<{
@@ -135,6 +136,15 @@ export default function AdminDashboard() {
 
         setStats(prev => ({ ...prev, onlineUsers: onlineProfiles.length }));
       })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        // Alert admin about new user
+        newPresences.forEach((presence: any) => {
+          // Avoid alerting for self
+          if (presence.user_id !== profile?.id) {
+            setNotification({ type: 'info', message: `🟢 User Online: ${presence.full_name || 'Anonymous User'}` });
+          }
+        });
+      })
       .subscribe();
 
     const interval = setInterval(() => {
@@ -148,6 +158,39 @@ export default function AdminDashboard() {
       clearInterval(interval);
     };
   }, [profile?.id, authLoading]);
+
+  // Session Enforcement Heartbeat
+  useEffect(() => {
+    const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
+    const secret = localStorage.getItem('sys_admin_secret');
+    const token = localStorage.getItem('sys_admin_session_token');
+
+    if (!isBypass || !secret || !token) return;
+
+    const pingSession = async () => {
+      const { data, error } = await supabase.rpc('sys_ping_admin_session', {
+        secret_key: secret,
+        s_token: token
+      });
+
+      if (error || (data && !data.success)) {
+        console.error('Session Heartbeat Failed:', error || data?.message);
+        alert(data?.message || 'Access Denied: Your administrator session has been taken over by another user or has timed out.');
+        localStorage.removeItem('sys_admin_bypass');
+        localStorage.removeItem('sys_admin_secret');
+        localStorage.removeItem('sys_admin_session_token');
+        window.location.assign('/login');
+      }
+    };
+
+    // Ping every 1 minute
+    const pingInterval = setInterval(pingSession, 60000);
+
+    // Initial ping on mount to verify session is still valid
+    pingSession();
+
+    return () => clearInterval(pingInterval);
+  }, []);
 
   useEffect(() => {
     if (notification) {
@@ -209,7 +252,7 @@ export default function AdminDashboard() {
       const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
       const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
 
-      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes, newsletterRes, totalProductsRes, topupsRes, newSubsRes] = await Promise.all([
+      const [appsRes, usersRes, sellersRes, adminsRes, publishersRes, productsCountRes, servicesCountRes, newsRes, ticketsRes, logsRes, analyticsRes, allProductsRes, settingsRes, buyersRes, newsletterRes, totalProductsRes, topupsRes, newSubsRes, platformSettingsRes] = await Promise.all([
         supabase.from('seller_applications').select('*, user:profiles!user_id(*)').order('created_at', { ascending: false }).limit(50),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('seller_profiles').select('id', { count: 'exact', head: true }),
@@ -219,7 +262,11 @@ export default function AdminDashboard() {
         supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('category', 'service'),
         supabase.from('campus_news').select('id', { count: 'exact', head: true }).eq('is_published', true),
         (isBypass
-          ? supabase.rpc('sys_get_support_stats', { secret_key: secret }).then((res: any) => ({ count: res.data ?? 0, error: res.error, data: null }))
+          ? supabase.rpc('sys_get_support_tickets', { secret_key: secret }).then((res: any) => {
+            const tickets = res.data || [];
+            const pendingCount = tickets.filter((t: any) => t.status === 'open' || t.status === 'in_progress').length;
+            return { count: pendingCount, error: res.error, data: null };
+          })
           : supabase.from('support_tickets').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress'])
         ),
         supabase.from('activity_logs').select('*, user:profiles!user_id(full_name)').order('created_at', { ascending: false }).limit(20),
@@ -239,7 +286,8 @@ export default function AdminDashboard() {
         (isBypass
           ? supabase.rpc('sys_get_subs_list', { secret_key: secret }).limit(5)
           : supabase.from('newsletter_subscribers').select('*').order('created_at', { ascending: false }).limit(5)
-        )
+        ),
+        supabase.from('platform_settings').select('value').eq('key', 'subscriptions_enabled').maybeSingle()
       ]);
 
       if (logsRes.data) setRecentLogs(logsRes.data);
@@ -292,6 +340,7 @@ export default function AdminDashboard() {
         news: newsRes.count || 0,
         tickets: ticketsRes.count || 0,
         smsEnabled: settingsRes.data?.enable_sms ?? true,
+        subscriptionRequired: platformSettingsRes?.data?.value ?? true,
         newsletter: newsletterRes.count || (newsletterRes.data instanceof Array ? newsletterRes.data.length : 0),
         total_products: totalProductsRes.count || 0
       }));
@@ -328,6 +377,25 @@ export default function AdminDashboard() {
   const adminUpdateSettings = async (settingKey: string, value: boolean) => {
     const isBypass = localStorage.getItem('sys_admin_bypass') === 'true';
     const secret = localStorage.getItem('sys_admin_secret') || 'pentvars-sys-admin-x892';
+
+    // Check if it's a platform setting
+    if (settingKey === 'subscriptions_enabled') {
+      if (isBypass && secret) {
+        const { error } = await supabase.rpc('sys_update_platform_setting', {
+          secret_key: secret,
+          setting_key: settingKey,
+          setting_value: value
+        });
+        return { error };
+      }
+
+      const { data: existing } = await supabase.from('platform_settings').select('key').eq('key', settingKey).maybeSingle();
+      if (!existing) {
+        return await supabase.from('platform_settings').insert({ key: settingKey, value });
+      }
+      return await supabase.from('platform_settings').update({ value }).eq('key', settingKey);
+    }
+
     if (isBypass && secret) {
       const { error } = await supabase.rpc('admin_update_settings', { setting_key: settingKey, setting_value: value, secret_key: secret });
       return { error };
@@ -352,6 +420,22 @@ export default function AdminDashboard() {
     } catch (error: any) {
       setStats(prev => ({ ...prev, smsEnabled: !stats.smsEnabled })); // Revert
       alert('Failed to update SMS setting: ' + error.message);
+    }
+  };
+
+  const toggleSubscription = async () => {
+    try {
+      const newValue = !stats.subscriptionRequired;
+      setStats(prev => ({ ...prev, subscriptionRequired: newValue })); // Optimistic update
+
+      const { error } = await adminUpdateSettings('subscriptions_enabled', newValue);
+
+      if (error) throw error;
+
+      setNotification({ type: 'success', message: `Seller Subscriptions ${newValue ? 'Required' : 'Bypassed'}` });
+    } catch (error: any) {
+      setStats(prev => ({ ...prev, subscriptionRequired: !stats.subscriptionRequired })); // Revert
+      alert('Failed to update Subscription setting: ' + error.message);
     }
   };
 
@@ -673,34 +757,36 @@ export default function AdminDashboard() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 bg-admin-pattern">
+    <div className="min-h-screen bg-[#0B1120] bg-admin-pattern text-slate-200 font-sans selection:bg-blue-500/30">
       <Navbar />
 
-      {/* Real-time Status */}
-      <div className="fixed top-20 right-6 z-40">
-        <div className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 backdrop-blur-xl border ${isConnected ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-slate-700/50 border-slate-600/30 text-slate-400'
+      {/* Real-time Status - Pill Design */}
+      <div className="fixed top-24 right-6 z-40 animate-fade-in">
+        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 backdrop-blur-md border shadow-2xl transition-all duration-500 ${isConnected
+          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-emerald-500/10'
+          : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
           }`}>
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
-          {isConnected ? 'Live' : 'Offline'}
+          <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse shadow-[0_0_10px_currentColor]' : 'bg-rose-500'}`}></span>
+          {isConnected ? 'System Online' : 'Reconnecting...'}
         </div>
       </div>
 
       {/* Access Denied Guard */}
       {(!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) && !authLoading && (
-        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6">
-          <div className="max-w-md w-full text-center">
-            <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-              <i className="ri-lock-2-line text-4xl text-rose-500"></i>
-            </div>
-            <h2 className="text-3xl font-black text-white mb-2">Access Restricted</h2>
-            <p className="text-slate-400 mb-8">You do not have permission to view the Admin Dashboard. Current Role: <span className="text-white font-bold">{profile?.role || 'Guest'}</span></p>
-            <div className="flex gap-4 justify-center">
-              <button onClick={() => navigate('/marketplace')} className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors">
-                Go to Marketplace
-              </button>
-              <button onClick={() => navigate('/login')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                Sign In
-              </button>
+        <div className="fixed inset-0 z-50 bg-[#0B1120]/90 backdrop-blur-xl flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center relative">
+            <div className="absolute inset-0 bg-blue-500/20 blur-[100px] rounded-full opacity-50"></div>
+            <div className="relative z-10">
+              <div className="w-24 h-24 bg-gradient-to-br from-rose-500 to-orange-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-rose-500/20 rotate-3 hover:rotate-6 transition-transform">
+                <i className="ri-shield-keyhole-line text-4xl text-white"></i>
+              </div>
+              <h2 className="text-4xl font-black text-white mb-2 tracking-tight">Restricted Area</h2>
+              <p className="text-slate-400 mb-8 font-medium leading-relaxed">This admin dashboard is restricted to authorized personnel only. Your access attempt has been logged.</p>
+              <div className="flex gap-4 justify-center">
+                <button onClick={() => navigate('/marketplace')} className="px-8 py-3.5 bg-slate-800/50 border border-white/10 text-white rounded-xl font-bold hover:bg-slate-800 hover:border-white/20 transition-all uppercase tracking-widest text-xs">
+                  Return Home
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -708,327 +794,326 @@ export default function AdminDashboard() {
 
       {/* Notifications */}
       {notification && (
-        <div className="fixed top-32 right-6 z-50 animate-in slide-in-from-right fade-in duration-300">
-          <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-bold backdrop-blur-xl border ${notification.type === 'success' ? 'bg-emerald-600/90 border-emerald-500/50' :
-            notification.type === 'error' ? 'bg-rose-600/90 border-rose-500/50' : 'bg-blue-600/90 border-blue-500/50'
+        <div className="fixed top-32 right-6 z-50 animate-slide-in-right">
+          <div className={`px-6 py-4 rounded-2xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] flex items-center gap-4 text-white font-bold backdrop-blur-2xl border ${notification.type === 'success' ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-100' :
+            notification.type === 'error' ? 'bg-rose-600/20 border-rose-500/50 text-rose-100' : 'bg-blue-600/20 border-blue-500/50 text-blue-100'
             }`}>
-            <i className={`text-xl ${notification.type === 'success' ? 'ri-checkbox-circle-line' : notification.type === 'error' ? 'ri-error-warning-line' : 'ri-information-line'}`}></i>
-            <span className="text-sm">{notification.message}</span>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${notification.type === 'success' ? 'bg-emerald-500' : notification.type === 'error' ? 'bg-rose-500' : 'bg-blue-500'
+              }`}>
+              <i className={`text-lg ${notification.type === 'success' ? 'ri-check-line' : notification.type === 'error' ? 'ri-close-line' : 'ri-info-i'}`}></i>
+            </div>
+            <span className="text-sm tracking-wide">{notification.message}</span>
           </div>
         </div>
       )}
 
-      <div className="max-w-[1600px] mx-auto px-6 lg:px-8 pt-32 pb-72">
+      <div className="max-w-[1800px] mx-auto px-6 lg:px-12 pt-32 pb-72">
 
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-5xl font-black text-white mb-2 tracking-tight">Admin Dashboard</h1>
-            <p className="text-slate-400 font-medium">Welcome back, <span className="text-blue-400 font-bold">{profile?.full_name}</span></p>
-            <div className="flex gap-4 mt-4">
-              <Link to="/admin/email-templates" className="text-xs font-bold text-slate-500 hover:text-white flex items-center gap-1 uppercase tracking-wider transition-colors">
-                <i className="ri-layout-3-line"></i> Email Templates
+        {/* Dashboard Header */}
+        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-10 relative">
+          {/* Decorative BG */}
+          <div className="absolute top-[-20%] left-[-10%] w-[400px] h-[400px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+
+          <div className="relative z-10">
+            <h1 className="text-4xl md:text-6xl font-black text-white mb-2 tracking-tighter leading-[0.9]">
+              Admin <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-violet-400">Dashboard.</span>
+            </h1>
+            <p className="text-slate-400 font-medium max-w-lg text-sm">
+              Welcome back, <span className="text-white font-bold border-b-2 border-blue-500/30 pb-0.5">{profile?.full_name}</span>.
+              System is running optimally.
+            </p>
+
+            <div className="flex flex-wrap gap-3 mt-6">
+              <Link to="/admin/email-templates" className="px-4 py-2 rounded-lg bg-slate-800/50 border border-white/5 hover:border-blue-500/30 text-slate-300 text-[10px] font-bold uppercase tracking-widest hover:text-white transition-all flex items-center gap-2 group">
+                <i className="ri-layout-3-line text-blue-500 group-hover:scale-110 transition-transform"></i> Email Templates
+              </Link>
+              <Link to="/admin/internships" className="px-4 py-2 rounded-lg bg-slate-800/50 border border-white/5 hover:border-purple-500/30 text-slate-300 text-[10px] font-bold uppercase tracking-widest hover:text-white transition-all flex items-center gap-2 group">
+                <i className="ri-briefcase-4-line text-purple-500 group-hover:scale-110 transition-transform"></i> Jobs & Internships
               </Link>
             </div>
-            <p className="text-slate-500 text-sm mt-1">Last updated: {lastUpdate.toLocaleTimeString()}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/profile"
-              className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 rounded-xl font-bold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2"
-            >
-              <i className="ri-user-smile-line text-blue-500"></i>
-              My Profile
-            </Link>
+
+          <div className="flex flex-wrap items-center gap-3 relative z-10">
             <button
               onClick={() => setShowAddAdminModal(true)}
-              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold border border-slate-700 transition-all flex items-center gap-2"
+              className="h-12 px-6 rounded-xl bg-slate-800/40 border border-white/5 text-white font-bold hover:bg-slate-800 transition-all flex items-center gap-3 group backdrop-blur-sm"
             >
-              <i className="ri-shield-user-line text-blue-400"></i>
-              Manage Access
+              <span className="w-6 h-6 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                <i className="ri-shield-user-fill text-xs"></i>
+              </span>
+              <span className="text-xs uppercase tracking-wide">Access Control</span>
             </button>
+
             <button
               onClick={() => fetchData(false)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-bold shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2"
+              className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 transition-all hover:scale-105 active:scale-95"
             >
-              <i className="ri-refresh-line"></i>
+              <i className={`ri-refresh-line text-lg ${loading ? 'animate-spin' : ''}`}></i>
             </button>
           </div>
         </div>
 
 
-
-        {/* Overview Stats Cards */}
+        {/* Overview Stats Grid */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              {/* Total Users Card */}
-              <Link to="/admin/users" className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-blue-500/20 transition-all group overflow-hidden relative block">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:rotate-12 transition-transform">
-                    <i className="ri-user-heart-line text-2xl"></i>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
+              {/* Total Users - Glass Card */}
+              <Link to="/admin/users" className="relative group overflow-hidden rounded-2xl bg-[#131c31] border border-white/5 p-5 transition-all duration-500 hover:border-blue-500/30 hover:shadow-[0_0_40px_-10px_rgba(59,130,246,0.15)]">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-user-smile-fill text-5xl xl:text-6xl text-blue-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="inline-flex p-2 rounded-lg bg-blue-500/10 text-blue-400 mb-3 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <i className="ri-user-heart-line text-lg"></i>
                   </div>
-                  <div className="text-right">
-                    <h3 className="text-3xl font-black text-white">{stats.users?.toLocaleString() || '0'}</h3>
-                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Total Users</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-2xl xl:text-3xl font-black text-white tracking-tight">{stats.users?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Users</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/10">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{onlinePresence.total} Active Now</p>
+                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wide">{onlinePresence.total} Online</span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-400">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} new</span>
                 </div>
               </Link>
 
-              {/* Users/Buyers & Subscribers Consolidated */}
-              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-orange-500/20 transition-all group overflow-hidden relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:rotate-12 transition-transform">
-                    <i className="ri-group-line text-2xl"></i>
+              {/* Buyers - Glass Card */}
+              <div className="relative group overflow-hidden rounded-2xl bg-[#131c31] border border-white/5 p-5 transition-all duration-500 hover:border-indigo-500/30 hover:shadow-[0_0_40px_-10px_rgba(99,102,241,0.15)]">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-shopping-bag-3-fill text-5xl xl:text-6xl text-indigo-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="inline-flex p-2 rounded-lg bg-indigo-500/10 text-indigo-400 mb-3 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                    <i className="ri-group-line text-lg"></i>
                   </div>
-                  <div className="text-right">
-                    <h3 className="text-3xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</h3>
-                    <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Total Buyers</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-2xl xl:text-3xl font-black text-white tracking-tight">{stats.buyers?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Buyers</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Newsletter</p>
-                    <p className="text-lg font-black text-white">{stats.newsletter?.toLocaleString() || '0'}</p>
-                  </div>
-                  <Link to="/admin/newsletter" className="p-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white transition-all">
-                    <i className="ri-mail-send-line"></i>
-                  </Link>
+
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Growth</span>
+                  <span className="text-[9px] font-bold text-emerald-400">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} this week</span>
                 </div>
               </div>
 
-              {/* Sellers Card */}
-              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-emerald-500/20 transition-all group relative overflow-hidden">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                    <i className="ri-store-2-line text-2xl"></i>
+              {/* Sellers - Glass Card */}
+              <div className="relative group overflow-hidden rounded-2xl bg-[#131c31] border border-white/5 p-5 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.15)]">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-store-3-fill text-5xl xl:text-6xl text-emerald-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="inline-flex p-2 rounded-lg bg-emerald-500/10 text-emerald-400 mb-3 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <i className="ri-store-2-line text-lg"></i>
                   </div>
-                  <div>
-                    <h3 className="text-3xl font-black text-white leading-none">{stats.sellers?.toLocaleString() || '0'}</h3>
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">Total Sellers</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-2xl xl:text-3xl font-black text-white tracking-tight">{stats.sellers?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Sellers</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partners</p>
-                    <span className="text-[10px] font-bold text-blue-400 flex items-center gap-1">
-                      {stats.pending} Pending
-                    </span>
-                  </div>
+
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Applications</span>
+                  <span className="text-[9px] font-bold text-amber-400">{stats.pending} Pending</span>
                 </div>
               </div>
 
-              {/* Product Analytics Card */}
-              <div className="bg-slate-800/40 rounded-3xl p-6 border border-white/5 hover:border-purple-500/20 transition-all group relative overflow-hidden flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
-                      <i className="ri-box-3-line text-2xl"></i>
+              {/* Products - Glass Card */}
+              <div className="relative group overflow-hidden rounded-2xl bg-[#131c31] border border-white/5 p-5 transition-all duration-500 hover:border-purple-500/30 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.15)] flex flex-col justify-between">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-700">
+                  <i className="ri-box-3-fill text-5xl xl:text-6xl text-purple-500"></i>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start">
+                    <div className="inline-flex p-2 rounded-lg bg-purple-500/10 text-purple-400 mb-3 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                      <i className="ri-box-3-line text-lg"></i>
                     </div>
-                    <div>
-                      <h3 className="text-3xl font-black text-white leading-none">{stats.total_products?.toLocaleString() || '0'}</h3>
-                      <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">Total Products</p>
-                    </div>
+                    <button
+                      onClick={() => setIsProductCreatorOpen(true)}
+                      className="p-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-lg shadow-purple-900/40 active:scale-95 group/btn"
+                    >
+                      <i className="ri-add-line text-lg group-hover/btn:rotate-90 transition-transform"></i>
+                    </button>
                   </div>
-                  <div className="pt-4 border-t border-white/5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inventory</p>
-                      <span className="text-[10px] font-bold text-emerald-400">
-                        {stats.products_count?.toLocaleString() || '0'} Live
-                      </span>
-                    </div>
+                  <div className="space-y-0.5">
+                    <h3 className="text-2xl xl:text-3xl font-black text-white tracking-tight">{stats.total_products?.toLocaleString() || '0'}</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Products</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsProductCreatorOpen(true)}
-                  className="w-full mt-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-purple-900/20"
-                >
-                  <i className="ri-add-circle-line mr-2 text-lg align-middle"></i>
-                  Add Product
-                </button>
+
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between relative z-10">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Inventory</span>
+                  <span className="text-[9px] font-bold text-emerald-400">{stats.products_count} Active</span>
+                </div>
               </div>
             </div>
 
             {/* Quick Overview & Status Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-slate-900/50 rounded-2xl p-6 border border-white/5 backdrop-blur-xl relative overflow-hidden group">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="bg-slate-900/50 rounded-2xl p-5 xl:p-6 border border-white/5 backdrop-blur-xl relative overflow-hidden group">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                      <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em]">Presence Terminal • LIVE</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.25em]">Presence Terminal • LIVE</p>
                     </div>
-                    <h4 className="text-3xl font-black text-white flex items-center gap-2">
+                    <h4 className="text-2xl xl:text-3xl font-black text-white flex items-end gap-2 mb-2">
                       {onlinePresence.total}
-                      <span className="text-xs font-medium text-slate-400">Online Now</span>
+                      <span className="text-xs font-bold text-slate-500 mb-1">Online Now</span>
                     </h4>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                  <div className="flex flex-wrap gap-2">
+                    <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-all text-center min-w-[60px]">
                       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Buyers</p>
-                      <p className="text-xl font-black text-white">{onlinePresence.buyers}</p>
+                      <p className="text-sm font-black text-white">{onlinePresence.buyers}</p>
                     </div>
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                    <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-all text-center min-w-[60px]">
                       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Sellers</p>
-                      <p className="text-xl font-black text-white">{onlinePresence.sellers}</p>
+                      <p className="text-sm font-black text-white">{onlinePresence.sellers}</p>
                     </div>
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all">
+                    <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-all text-center min-w-[60px]">
                       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Admins</p>
-                      <p className="text-xl font-black text-white">{onlinePresence.admins}</p>
+                      <p className="text-sm font-black text-white">{onlinePresence.admins}</p>
                     </div>
                   </div>
                 </div>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-600/10 transition-colors"></div>
+                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full -mr-20 -mt-20 blur-[100px] pointer-events-none"></div>
               </div>
 
-              <div className="bg-slate-900/50 rounded-2xl p-6 border border-white/5 backdrop-blur-xl grid grid-cols-3 gap-4">
-                <div className="flex flex-col justify-center">
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Buyers</p>
-                  <p className="text-2xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</p>
+              <div className="bg-slate-900/50 rounded-2xl p-5 xl:p-6 border border-white/5 backdrop-blur-xl flex flex-col justify-center gap-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Buyers</p>
+                    <p className="text-xl xl:text-2xl font-black text-white">{stats.buyers?.toLocaleString() || '0'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1">+{(analyticsData.recentGrowth?.slice(-1)[0]?.count || 0)} New</p>
+                    <div className="w-16 h-1 bg-emerald-500/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-3/4 animate-pulse"></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col justify-center border-x border-white/5 px-4">
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admins</p>
-                  <p className="text-2xl font-black text-emerald-400">{stats.admins?.toLocaleString() || '0'}</p>
-                </div>
-                <div className="flex flex-col justify-center pl-4">
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Publishers</p>
-                  <p className="text-2xl font-black text-purple-400">{stats.publishers?.toLocaleString() || '0'}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admins</p>
+                    <p className="text-lg font-black text-emerald-400">{stats.admins?.toLocaleString() || '0'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Publishers</p>
+                    <p className="text-lg font-black text-purple-400">{stats.publishers?.toLocaleString() || '0'}</p>
+                  </div>
                 </div>
               </div>
             </div>
-
-
           </>
         )}
 
         {/* PROMINENT ALERTS - SMS & Pending Applications */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
           {/* SMS Balance Alert / System Status Reflection */}
-          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 flex flex-col justify-between ${isSmsLoading
+          <div className={`relative overflow-hidden rounded-2xl p-5 border flex flex-col justify-between transition-all duration-500 ${isSmsLoading
             ? 'bg-slate-800/50 border-slate-700/50'
             : !stats.smsEnabled
               ? 'bg-slate-800/50 border-slate-700 grayscale'
               : stats.smsBalance < 50
-                ? 'bg-gradient-to-br from-rose-600/20 to-rose-700/20 border-rose-500/50'
-                : 'bg-gradient-to-br from-violet-600/20 to-violet-700/20 border-violet-500/50'
+                ? 'bg-gradient-to-br from-rose-950/50 to-rose-900/50 border-rose-500/30'
+                : 'bg-gradient-to-br from-indigo-950/50 to-violet-900/50 border-indigo-500/30'
             }`}>
             {!stats.smsEnabled && (
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center p-6">
-                <i className="ri-error-warning-line text-4xl text-slate-400 mb-2"></i>
-                <div className="px-4 py-1.5 bg-slate-800 rounded-full border border-white/10 text-[10px] font-black text-slate-300 uppercase tracking-widest shadow-2xl">
+                <i className="ri-error-warning-line text-3xl text-slate-400 mb-2"></i>
+                <div className="px-3 py-1 bg-slate-800 rounded-full border border-white/10 text-[9px] font-black text-slate-300 uppercase tracking-widest shadow-2xl">
                   SMS System Offline
                 </div>
-                <p className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Notifications Disabled</p>
               </div>
             )}
 
-            <div className="relative flex-1">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-xl ${isSmsLoading
-                    ? 'bg-slate-700/50'
-                    : stats.smsBalance < 50 ? 'bg-rose-500/20' : 'bg-violet-500/20'
-                    } flex items-center justify-center`}>
-                    {isSmsLoading ? (
-                      <i className="ri-loader-4-line text-3xl text-slate-500 animate-spin"></i>
-                    ) : (
-                      <i className={`ri-message-3-line text-3xl ${stats.smsBalance < 50 ? 'text-rose-400' : 'text-violet-400'}`}></i>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-3xl font-black text-white">{isSmsLoading ? '...' : (stats.smsBalance?.toLocaleString() || '0')}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMS Balance</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleSMS}
-                    className={`px-4 py-2 rounded-xl font-bold text-xs transition-all border ${stats.smsEnabled
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                      }`}
-                  >
-                    System: {stats.smsEnabled ? 'ON' : 'OFF'}
-                  </button>
-                  <Link
-                    to="/admin/sms"
-                    className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/5"
-                  >
-                    <i className="ri-history-line"></i>
-                  </Link>
-                </div>
+            <div className="relative z-0 flex justify-between items-start mb-4">
+              <div className="p-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
+                <i className="ri-message-3-fill text-xl text-white"></i>
               </div>
-
-              {!isSmsLoading && stats.smsBalance < 50 && stats.smsEnabled && (
-                <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/20 flex items-center gap-3 text-rose-400 text-xs font-bold uppercase tracking-wide mb-4">
-                  <i className="ri-error-warning-fill text-lg"></i>
-                  <span>Low Credit Balance - Top up soon</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-white/5">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Arkesel Credits Available</p>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${stats.smsEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stats.smsEnabled ? 'Functional' : 'Halted'}</span>
+              <div className={`px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${stats.smsBalance < 50 ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                }`}>
+                {stats.smsBalance < 50 ? 'Balance Low' : 'Healthy'}
               </div>
             </div>
+
+            <div>
+              <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mb-1">SMS Credit Balance</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-4xl font-black text-white tracking-tighter">
+                  {isSmsLoading ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    stats.smsBalance?.toFixed(0)
+                  )}
+                </h3>
+                <span className="text-sm font-bold text-white/40">Points</span>
+              </div>
+              <p className="text-[9px] font-medium text-white/40 mt-1">
+                {stats.smsSent} messages sent in current session
+              </p>
+            </div>
+
+            {/* Background Decoration */}
+            <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
           </div>
 
           {/* Pending Applications Alert */}
-          <div className={`relative overflow-hidden rounded-2xl p-8 border-2 flex flex-col justify-between ${pendingApps.length > 0
-            ? 'bg-gradient-to-br from-amber-600/20 to-amber-700/20 border-amber-500/50'
-            : 'bg-gradient-to-br from-emerald-600/20 to-emerald-700/20 border-emerald-500/50'
+          <div className={`relative overflow-hidden rounded-2xl p-5 border flex flex-col justify-between transition-all duration-500 ${pendingApps.length > 0
+            ? 'bg-gradient-to-br from-amber-950/50 to-orange-900/50 border-amber-500/30'
+            : 'bg-gradient-to-br from-emerald-950/50 to-teal-900/50 border-emerald-500/30'
             }`}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-14 h-14 rounded-xl ${pendingApps.length > 0 ? 'bg-amber-500/20' : 'bg-emerald-500/20'} flex items-center justify-center`}>
-                    <i className={`ri-file-list-3-line text-3xl ${pendingApps.length > 0 ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}></i>
-                  </div>
-                  <div>
-                    <h4 className="text-3xl font-black text-white">{pendingApps.length}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending Applications</p>
-                  </div>
+            <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -mr-20 -mt-20 blur-[100px] pointer-events-none"></div>
+
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
+                  <i className={`text-xl ${pendingApps.length > 0 ? 'ri-file-list-3-fill text-amber-400' : 'ri-checkbox-circle-fill text-emerald-400'}`}></i>
                 </div>
+                <div className={`px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${pendingApps.length > 0 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  }`}>
+                  {pendingApps.length > 0 ? 'Review Needed' : 'All Clear'}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-4xl font-black text-white tracking-tighter mb-1">{pendingApps.length}</h4>
+                <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mb-3">Pending Applications</p>
+
                 {pendingApps.length > 0 ? (
                   <button
                     onClick={() => setActiveTab('applications')}
-                    className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-amber-500/20"
+                    className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold uppercase tracking-widest text-[9px] transition-all shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2 group"
                   >
                     Review Now
+                    <i className="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
                   </button>
                 ) : (
-                  <div className="px-6 py-3 bg-emerald-600/20 text-emerald-400 rounded-xl font-bold text-sm flex items-center gap-2">
-                    <i className="ri-checkbox-circle-line"></i>
-                    All Clear
+                  <div className="w-full py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 cursor-default">
+                    <i className="ri-check-double-line"></i>
+                    System Optimized
                   </div>
                 )}
               </div>
-              {pendingApps.length > 0 && (
-                <div className="flex items-center gap-2 text-amber-300 text-sm font-bold">
-                  <i className="ri-notification-3-line animate-pulse"></i>
-                  <span>{pendingApps.length} seller application{pendingApps.length !== 1 ? 's' : ''} awaiting review</span>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-
-
-
-        {/* Tabbed Navigation */}
+        </div>        {/* Tabbed Navigation */}
         <div className="flex border-b border-slate-700/50 mb-8 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview', icon: 'ri-dashboard-2-line' },
@@ -1062,9 +1147,9 @@ export default function AdminDashboard() {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <div className="xl:col-span-2 space-y-6">
-                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8">
-                  <h3 className="text-xl font-black text-white mb-6">Quick Actions</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                  <h3 className="text-lg font-black text-white mb-5 uppercase tracking-wide">Quick Actions</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
                       { label: 'Users', path: '/admin/users', icon: 'ri-user-settings-line', color: 'blue' },
                       { label: 'Applications', path: '/admin/seller-applications', icon: 'ri-file-list-3-line', color: 'amber', badge: pendingApps.length },
@@ -1085,45 +1170,46 @@ export default function AdminDashboard() {
                       <Link
                         key={i}
                         to={action.path}
-                        className="relative group bg-slate-900/50 hover:bg-slate-900 border border-slate-700/50 hover:border-slate-600 rounded-2xl p-6 transition-all"
+                        className="relative group bg-slate-900/50 hover:bg-slate-900 border border-slate-700/50 hover:border-slate-600 rounded-xl p-4 transition-all"
                       >
                         {action.badge ? (
-                          <span className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white text-xs font-black rounded-full flex items-center justify-center animate-pulse">
+                          <span className="absolute -top-2 -right-2 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse">
                             {action.badge}
                           </span>
                         ) : null}
-                        <div className={`w-12 h-12 rounded-xl bg-${action.color}-500/10 flex items-center justify-center text-${action.color}-400 mb-4 group-hover:scale-110 transition-transform`}>
-                          <i className={`${action.icon} text-2xl`}></i>
+                        <div className={`w-10 h-10 rounded-lg bg-${action.color}-500/10 flex items-center justify-center text-${action.color}-400 mb-3 group-hover:scale-110 transition-transform`}>
+                          <i className={`${action.icon} text-xl`}></i>
                         </div>
-                        <h4 className="font-black text-white text-sm">{action.label}</h4>
+                        <h4 className="font-bold text-white text-xs uppercase tracking-wide">{action.label}</h4>
                       </Link>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 relative overflow-hidden">
-                    <i className="ri-customer-service-2-line absolute -right-4 -bottom-4 text-white/10 text-8xl"></i>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 relative overflow-hidden group">
+                    <i className="ri-customer-service-2-line absolute -right-3 -bottom-3 text-white/10 text-7xl group-hover:block hidden transition-all"></i>
+                    <i className="ri-customer-service-2-fill absolute -right-3 -bottom-3 text-white/10 text-7xl block group-hover:hidden transition-all"></i>
                     <div className="relative">
-                      <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-2">Support</p>
-                      <div className="text-4xl font-black text-white mb-1">{stats.tickets}</div>
-                      <Link to="/admin/support" className="text-xs font-bold text-blue-200 hover:text-white transition-colors">Manage →</Link>
+                      <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-2">Support</p>
+                      <div className="text-3xl font-black text-white mb-1">{stats.tickets}</div>
+                      <Link to="/admin/support" className="text-[10px] font-bold text-blue-200 hover:text-white transition-colors flex items-center gap-1">Manage <i className="ri-arrow-right-line"></i></Link>
                     </div>
                   </div>
-                  <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
-                    <i className="ri-newspaper-line absolute -right-4 -bottom-4 text-white/5 text-8xl"></i>
+                  <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 relative overflow-hidden group hover:border-slate-600 transition-colors">
+                    <i className="ri-newspaper-line absolute -right-3 -bottom-3 text-white/5 text-7xl"></i>
                     <div className="relative">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">News Articles</p>
-                      <div className="text-4xl font-black text-blue-400 mb-1">{stats.news}</div>
-                      <Link to="/admin/news" className="text-xs font-bold text-slate-400 hover:text-white transition-colors">Manage →</Link>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">News Articles</p>
+                      <div className="text-3xl font-black text-blue-400 mb-1">{stats.news}</div>
+                      <Link to="/admin/news" className="text-[10px] font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1">Manage <i className="ri-arrow-right-line"></i></Link>
                     </div>
                   </div>
-                  <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
-                    <i className="ri-shopping-bag-3-line absolute -right-4 -bottom-4 text-white/5 text-8xl"></i>
+                  <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 relative overflow-hidden group hover:border-slate-600 transition-colors">
+                    <i className="ri-shopping-bag-3-line absolute -right-3 -bottom-3 text-white/5 text-7xl"></i>
                     <div className="relative">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Products</p>
-                      <div className="text-4xl font-black text-emerald-400 mb-1">{stats.products_count + stats.services_count}</div>
-                      <button onClick={() => setActiveTab('products')} className="text-xs font-bold text-slate-400 hover:text-white transition-colors text-left">Manage →</button>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Products</p>
+                      <div className="text-3xl font-black text-emerald-400 mb-1">{stats.products_count + stats.services_count}</div>
+                      <button onClick={() => setActiveTab('products')} className="text-[10px] font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1">Manage <i className="ri-arrow-right-line"></i></button>
                     </div>
                   </div>
                 </div>
@@ -1415,6 +1501,46 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeTab === 'settings' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8">
+                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
+                  <i className="ri-message-3-line text-violet-500"></i> Communication
+                </h3>
+                <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                  <div>
+                    <h4 className="font-bold text-white mb-1">Global SMS Notifications</h4>
+                    <p className="text-xs text-slate-400">Enable or disable all outbound system SMS.</p>
+                  </div>
+                  <button
+                    onClick={toggleSMS}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${stats.smsEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${stats.smsEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8">
+                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
+                  <i className="ri-shield-keyhole-line text-amber-500"></i> Access & Billing
+                </h3>
+                <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                  <div>
+                    <h4 className="font-bold text-white mb-1">Require Seller Subscriptions</h4>
+                    <p className="text-xs text-slate-400">If disabled, subscription checks are bypassed.</p>
+                  </div>
+                  <button
+                    onClick={toggleSubscription}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${stats.subscriptionRequired ? 'bg-blue-500' : 'bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${stats.subscriptionRequired ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'activity' && (
             <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
               <div className="p-8 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/80 to-slate-800/50 flex justify-between items-center">
@@ -1460,130 +1586,133 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </div>
-          )}
+          )
+          }
 
-          {activeTab === 'sms' && (
-            <div className="space-y-8">
-              {/* SMS Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400">
-                      <i className="ri-message-3-line text-2xl"></i>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Sent</p>
-                      <p className="text-2xl font-black text-white">{stats.smsSent?.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                      <i className="ri-wallet-3-line text-2xl"></i>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Credits</p>
-                      <p className="text-2xl font-black text-white">{stats.smsBalance?.toLocaleString()}</p>
+          {
+            activeTab === 'sms' && (
+              <div className="space-y-8">
+                {/* SMS Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400">
+                        <i className="ri-message-3-line text-2xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Sent</p>
+                        <p className="text-2xl font-black text-white">{stats.smsSent?.toLocaleString()}</p>
+                      </div>
                     </div>
                   </div>
+                  <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <i className="ri-wallet-3-line text-2xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Credits</p>
+                        <p className="text-2xl font-black text-white">{stats.smsBalance?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 flex flex-col justify-center">
+                    <Link to="/admin/sms" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm uppercase tracking-wider text-center transition-all shadow-lg shadow-blue-500/20">
+                      Open SMS Console <i className="ri-arrow-right-line ml-2"></i>
+                    </Link>
+                  </div>
                 </div>
-                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 flex flex-col justify-center">
-                  <Link to="/admin/sms" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm uppercase tracking-wider text-center transition-all shadow-lg shadow-blue-500/20">
-                    Open SMS Console <i className="ri-arrow-right-line ml-2"></i>
-                  </Link>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Sent History */}
+                  <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+                    <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Recent Broadcasts</h3>
+                      <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">LAST 10</div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-900/50">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Message</th>
+                            <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipients</th>
+                            <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                          {smsHistory.length === 0 ? (
+                            <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No SMS history found</td></tr>
+                          ) : (
+                            smsHistory.map((log) => (
+                              <tr key={log.id} className="hover:bg-slate-700/20 transition-colors">
+                                <td className="px-6 py-4">
+                                  <p className="text-xs font-medium text-slate-300 line-clamp-2" title={(log.details as any)?.message || (log as any)?.action_details?.message}>
+                                    {(log.details as any)?.message || (log as any)?.action_details?.message || 'Message content unavailable'}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold rounded">
+                                    {(log.details as any)?.recipient_count || (log as any)?.action_details?.recipient_count || 1}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-right text-[10px] text-slate-500 font-mono">
+                                  {new Date(log.created_at).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Topup History */}
+                  <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+                    <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Credit Purchase History</h3>
+                      <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">RECENT</div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-900/50">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Units</th>
+                            <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                          {topupHistory.length === 0 ? (
+                            <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No purchase history found</td></tr>
+                          ) : (
+                            topupHistory.map((topup) => (
+                              <tr key={topup.id} className="hover:bg-slate-700/20 transition-colors">
+                                <td className="px-6 py-4 text-[10px] text-slate-400 font-mono">
+                                  {new Date(topup.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="text-xs font-black text-white">{topup.units?.toLocaleString()}</span>
+                                  <span className="text-[10px] text-slate-500 ml-1">UNITS</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded ${topup.status === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
+                                    topup.status === 'failed' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'
+                                    }`}>
+                                    {topup.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sent History */}
-                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
-                  <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
-                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Recent Broadcasts</h3>
-                    <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">LAST 10</div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-slate-900/50">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Message</th>
-                          <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipients</th>
-                          <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700/50">
-                        {smsHistory.length === 0 ? (
-                          <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No SMS history found</td></tr>
-                        ) : (
-                          smsHistory.map((log) => (
-                            <tr key={log.id} className="hover:bg-slate-700/20 transition-colors">
-                              <td className="px-6 py-4">
-                                <p className="text-xs font-medium text-slate-300 line-clamp-2" title={(log.details as any)?.message || (log as any)?.action_details?.message}>
-                                  {(log.details as any)?.message || (log as any)?.action_details?.message || 'Message content unavailable'}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold rounded">
-                                  {(log.details as any)?.recipient_count || (log as any)?.action_details?.recipient_count || 1}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right text-[10px] text-slate-500 font-mono">
-                                {new Date(log.created_at).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Topup History */}
-                <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
-                  <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
-                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Credit Purchase History</h3>
-                    <div className="px-3 py-1 bg-slate-700/50 rounded-lg text-[10px] font-bold text-slate-400">RECENT</div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-slate-900/50">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                          <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Units</th>
-                          <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700/50">
-                        {topupHistory.length === 0 ? (
-                          <tr><td colSpan={3} className="p-8 text-center text-slate-500 text-xs font-medium">No purchase history found</td></tr>
-                        ) : (
-                          topupHistory.map((topup) => (
-                            <tr key={topup.id} className="hover:bg-slate-700/20 transition-colors">
-                              <td className="px-6 py-4 text-[10px] text-slate-400 font-mono">
-                                {new Date(topup.created_at).toLocaleDateString()}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="text-xs font-black text-white">{topup.units?.toLocaleString()}</span>
-                                <span className="text-[10px] text-slate-500 ml-1">UNITS</span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded ${topup.status === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
-                                  topup.status === 'failed' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'
-                                  }`}>
-                                  {topup.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            )
+          }
+        </div >
         {/* Access Manager Modal */}
         {
           showAddAdminModal && (

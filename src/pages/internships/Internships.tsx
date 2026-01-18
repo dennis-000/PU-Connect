@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../../components/feature/Navbar';
+import { useAuth } from '../../contexts/AuthContext';
 
 import { useInternships } from '../../hooks/useInternships';
 
 export default function Internships() {
+    const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState('All');
 
@@ -12,17 +15,15 @@ export default function Internships() {
 
     const filteredInternships = useMemo(() => {
         return internships.filter(internship => {
-            // Search is already handled by the hook for the most part (via API),
-            // but we double check local results or if hook implementation changes.
-            // The hook fetches based on searchQuery, so we might receive relevant data already.
-            // But if we want client-side filtering on top of it:
-            return true; // We rely on the hook's search for the text query part mostly, 
-            // but let's keep the client-side type filter.
-        }).filter(internship => {
+            const isLocal = internship.location.includes('Ghana') ||
+                internship.location.includes('Accra') ||
+                internship.location.includes('Kumasi');
+
             const matchesFilter = filterType === 'All' ||
-                (filterType === 'Abroad' && (internship.location.includes('Remote') || internship.source === 'Abroad')) ||
-                (filterType === 'Local' && !internship.location.includes('Remote') && internship.source !== 'Abroad') ||
-                (filterType === internship.type); // Allow filtering by 'Full-time' etc if we add those chips later
+                (filterType === 'Abroad' && !isLocal) ||
+                (filterType === 'Local' && isLocal) ||
+                (filterType === internship.type);
+
             return matchesFilter;
         });
     }, [internships, filterType]);
@@ -40,10 +41,22 @@ export default function Internships() {
             {/* Mobile-First Header & Search */}
             <div className="pt-24 pb-4 bg-white dark:bg-gray-900 shadow-sm border-b border-gray-100 dark:border-gray-800 sticky top-0 z-30">
                 <div className="max-w-7xl mx-auto px-4 md:px-6">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <i className="ri-briefcase-line text-blue-600"></i>
-                        Career Market
-                    </h1>
+                    <div className="flex justify-between items-center mb-4">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i className="ri-briefcase-line text-blue-600"></i>
+                            Career Market
+                        </h1>
+                        {/* Admin Action Button */}
+                        {(user?.role === 'admin' || user?.role === 'super_admin' || localStorage.getItem('sys_admin_bypass') === 'true') && (
+                            <Link
+                                to="/admin/internships"
+                                className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-xs uppercase tracking-wide flex items-center gap-2 hover:opacity-90 transition-opacity"
+                            >
+                                <i className="ri-settings-4-line"></i>
+                                Manage Jobs
+                            </Link>
+                        )}
+                    </div>
 
                     <div className="relative">
                         <i className="ri-search-2-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
@@ -71,8 +84,8 @@ export default function Internships() {
                                 key={filter.id}
                                 onClick={() => setFilterType(filter.id)}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wide whitespace-nowrap transition-all border ${filterType === filter.id
-                                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white shadow-lg transform scale-105'
-                                        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white shadow-lg transform scale-105'
+                                    : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                     }`}
                             >
                                 <i className={`${filter.icon} text-sm`}></i>
@@ -86,82 +99,81 @@ export default function Internships() {
             {/* Content List */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 min-h-[60vh]">
 
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        Latest Opportunities
-                        <span className="bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded text-xs">
-                            {filteredInternships.length}
-                        </span>
-                    </h2>
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                            Latest Opportunities
+                        </h2>
+                        <p className="text-slate-500 text-sm mt-1">Found <span className="font-bold text-slate-900 dark:text-white">{filteredInternships.length}</span> positions for you</p>
+                    </div>
                 </div>
 
                 {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm animate-pulse">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
-                                    <div className="flex-1 space-y-2">
-                                        <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4"></div>
-                                        <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2"></div>
-                                    </div>
-                                </div>
-                                <div className="mt-6 space-y-2">
-                                    <div className="h-20 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
-                                </div>
-                            </div>
+                            <div key={i} className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-800 shadow-sm animate-pulse h-64"></div>
                         ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {filteredInternships.map((job) => (
-                            <div key={job.id} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl hover:border-blue-500/20 transition-all duration-300 group relative overflow-hidden">
+                            <div key={job.id} className="group bg-white dark:bg-gray-900 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-2xl hover:border-blue-500/30 transition-all duration-500 hover:-translate-y-1 relative overflow-hidden">
 
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 flex items-center justify-center">
-                                        <img src={job.logo_url} alt={job.company} className="w-full h-full object-contain rounded-lg" />
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded-md">
+                                {/* Hover Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 p-3 shadow-sm border border-gray-50 dark:border-gray-700 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center">
+                                            <img src={job.logo_url} alt={job.company} className="w-full h-full object-contain rounded-lg" />
+                                        </div>
+                                        <span className="px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-widest rounded-full border border-slate-100 dark:border-slate-700">
                                             {job.type}
                                         </span>
-                                        <span className="text-[10px] text-gray-400 font-medium mt-1">
-                                            {new Date(job.posted_at).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
-                                    {job.title}
-                                </h3>
-                                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-                                    <i className="ri-building-line text-gray-400"></i>
-                                    {job.company}
-                                    <span className="text-gray-300">•</span>
-                                    <span className="text-gray-400 text-xs truncate max-w-[120px]">{job.location}</span>
-                                </div>
-
-                                <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5">
-                                        {job.source === 'LinkedIn' ? (
-                                            <i className="ri-linkedin-fill text-blue-600 text-lg"></i>
-                                        ) : (
-                                            <i className="ri-global-line text-gray-400"></i>
-                                        )}
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                                            {job.source}
-                                        </span>
                                     </div>
 
-                                    <a
-                                        href={job.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="pl-4 pr-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-600 dark:hover:bg-gray-200 transition-colors"
-                                    >
-                                        Apply
-                                        <i className="ri-arrow-right-line"></i>
-                                    </a>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                        {job.title}
+                                    </h3>
+
+                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">
+                                        <i className="ri-building-line"></i>
+                                        {job.company}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 mb-6">
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                                            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Location</p>
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{job.location}</p>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                                            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Posted</p>
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{new Date(job.posted_at).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            {job.source === 'LinkedIn' ? (
+                                                <i className="ri-linkedin-fill text-blue-600 text-xl"></i>
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-white text-[10px] font-bold">PU</div>
+                                            )}
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                                {job.source}
+                                            </span>
+                                        </div>
+
+                                        <a
+                                            href={job.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="pl-6 pr-4 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold flex items-center gap-2 group-hover:bg-blue-600 dark:group-hover:bg-blue-500 dark:group-hover:text-white transition-all shadow-lg active:scale-95"
+                                        >
+                                            Apply Now
+                                            <i className="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -169,14 +181,20 @@ export default function Internships() {
                 )}
 
                 {!isLoading && filteredInternships.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                            <i className="ri-search-line text-3xl text-gray-400"></i>
+                    <div className="flex flex-col items-center justify-center py-32 text-center">
+                        <div className="w-24 h-24 bg-slate-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                            <i className="ri-search-eye-line text-4xl text-slate-300"></i>
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No jobs found</h3>
-                        <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                            Try adjusting your filters or search for something else.
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">No opportunities found</h3>
+                        <p className="text-slate-500 max-w-xs mx-auto mb-8 font-medium">
+                            We couldn't find any internships matching your criteria. Try adjusting your filters.
                         </p>
+                        <button
+                            onClick={() => { setFilterType('All'); setSearchQuery('') }}
+                            className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-colors uppercase tracking-widest text-xs"
+                        >
+                            Clear All Filters
+                        </button>
                     </div>
                 )}
             </div>

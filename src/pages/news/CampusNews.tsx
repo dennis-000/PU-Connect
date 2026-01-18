@@ -57,14 +57,14 @@ export default function CampusNews() {
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-600/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-full mb-8 backdrop-blur-md">
                 <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping"></span>
-                Official Press Network
+                Official News Feed
               </div>
               <h1 className="text-5xl md:text-8xl font-black text-white leading-none tracking-tighter mb-8 drop-shadow-2xl">
                 Campus<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Chronicle.</span>
               </h1>
               <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] flex items-center gap-3">
                 <span className="w-12 h-[1px] bg-blue-500/30"></span>
-                The pulse of Pentecost University communication
+                The pulse of Campus communication
               </p>
             </div>
 

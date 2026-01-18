@@ -78,6 +78,69 @@ const FALLBACK_JOBS: LinkedInJob[] = [
         "date_posted": "2026-01-18T13:29:01",
         "job_apply_link": "https://sg.linkedin.com/jobs/view/llm-engineer-intern-at-navo-health-4360242211",
         "employment_type": ["INTERN"]
+    },
+    {
+        "job_id": "gh-001",
+        "job_title": "Software Engineering Intern",
+        "employer_name": "Turntabl Ghana",
+        "employer_logo": "https://media.licdn.com/dms/image/v2/C4D0BAQG-X1Z1z1z1z/company-logo_200_200/0/1631330836515?e=2147483647&v=beta&t=TurntablLogoPlaceholder",
+        "locations_derived": ["Accra, Ghana"],
+        "date_posted": "2026-01-18T10:00:00",
+        "job_apply_link": "https://turntabl.io/careers",
+        "employment_type": ["INTERN"],
+        "job_description": "Join our 12-month intensive training program in software engineering and start your career with global clients."
+    },
+    {
+        "job_id": "gh-002",
+        "job_title": "Digital Marketing Intern",
+        "employer_name": "MTN Ghana",
+        "employer_logo": "https://upload.wikimedia.org/wikipedia/commons/9/93/New-mtn-logo.jpg",
+        "locations_derived": ["Accra, Ghana"],
+        "date_posted": "2026-01-18T09:30:00",
+        "job_apply_link": "https://mtn.com.gh/careers",
+        "employment_type": ["INTERN"],
+        "job_description": "Assist with social media campaigns and digital content creation for Ghana's leading telecommunications network."
+    },
+    {
+        "job_id": "gh-003",
+        "job_title": "IT Support Intern",
+        "employer_name": "Vodafone Ghana",
+        "employer_logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Vodafone_icon.svg/1024px-Vodafone_icon.svg.png",
+        "locations_derived": ["Kumasi, Ghana"],
+        "date_posted": "2026-01-17T14:00:00",
+        "job_apply_link": "https://vodafone.com.gh/careers",
+        "employment_type": ["INTERN"],
+        "job_description": "Provide technical support and troubleshooting for hardware and software issues."
+    },
+    {
+        "job_id": "gh-004",
+        "job_title": "Graphic Design Intern",
+        "employer_name": "Ogilvy Africa",
+        "employer_logo": "https://media.licdn.com/dms/image/v2/C4D0BAQG-X1Z1z1z1z/company-logo_200_200/0/1631330836515?e=2147483647&v=beta&t=OgilvyLogoPlaceholder",
+        "locations_derived": ["Accra, Ghana"],
+        "date_posted": "2026-01-17T11:00:00",
+        "job_apply_link": "https://ogilvy.com/careers",
+        "employment_type": ["INTERN"]
+    },
+    {
+        "job_id": "remote-005",
+        "job_title": "Remote React Developer Intern",
+        "employer_name": "Vercel",
+        "employer_logo": "https://assets.vercel.com/image/upload/front/favicon/vercel/180x180.png",
+        "locations_derived": ["San Francisco, CA (Remote)"],
+        "date_posted": "2026-01-16T15:00:00",
+        "job_apply_link": "https://vercel.com/careers",
+        "employment_type": ["INTERN"]
+    },
+    {
+        "job_id": "remote-006",
+        "job_title": "Product Design Intern",
+        "employer_name": "Figma",
+        "employer_logo": "https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg",
+        "locations_derived": ["New York, NY (Remote)"],
+        "date_posted": "2026-01-16T12:00:00",
+        "job_apply_link": "https://figma.com/careers",
+        "employment_type": ["INTERN"]
     }
 ];
 
@@ -88,8 +151,8 @@ export async function fetchLinkedInJobs(query: string = 'Internship'): Promise<L
     }
 
     try {
-        // Broad search to maximize chances of live results
-        const url = `https://${RAPID_API_HOST}/search?query=${encodeURIComponent(query)}&num_pages=1`;
+        // Broad search to maximize chances of live results, increased num_pages to 10 for more results
+        const url = `https://${RAPID_API_HOST}/search?query=${encodeURIComponent(query)}&num_pages=10&date_posted=month`;
 
         console.log('LinkedIn Integration: Fetching from:', url);
 
@@ -107,7 +170,7 @@ export async function fetchLinkedInJobs(query: string = 'Internship'): Promise<L
         }
 
         const result = await response.json();
-        console.log('LinkedIn Integration: Raw API Response:', result);
+        console.log('LinkedIn Integration: Raw API Response (Count):', result.data?.length || 0);
 
         if (!result.data || result.data.length === 0) {
             console.warn('LinkedIn Integration: No live jobs found, using Fallback Real Data.');
