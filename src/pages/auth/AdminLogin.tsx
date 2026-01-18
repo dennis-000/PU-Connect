@@ -53,7 +53,7 @@ export default function AdminLogin() {
             }
 
             // 1. Fallback: Check for HARDCODED System Credentials (Escape Hatch) [Keep for safety if DB fails]
-            if (email.toLowerCase() === 'system.admin@gmail.com' && password === 'puconnect@!') {
+            if (email.trim().toLowerCase() === 'system.admin@gmail.com' && password.trim() === 'puconnect@!') {
                 console.log('System Override Activated (Hardcoded)');
 
                 // SESSION ENFORCEMENT
